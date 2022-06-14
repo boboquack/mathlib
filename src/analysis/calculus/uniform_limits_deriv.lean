@@ -31,6 +31,86 @@ uniform Cauchy sequences.
 uniform convergence, limits of derivatives
 -/
 
+section generic
+
+lemma ball_mem_mono
+{α : Type*}
+{s s' : set α}
+{p : α → Prop}
+(hs : s' ⊆ s) :
+(∀ x : α, x ∈ s → p x) → (∀ x : α, x ∈ s' → p x) :=
+λ h x hx, h x (calc x ∈ s' : hx ... ⊆ s : hs)
+
+lemma filter.eventually.ne_bot_of_prop
+  {ι : Type*} (l : filter ι) [l.ne_bot] (p : Prop)
+  (hl : ∀ᶠ i in l, p) : p :=
+begin
+  rw filter.eventually_iff at hl,
+  rcases set.eq_empty_or_nonempty {x : ι | p} with hs | hs,
+  exfalso,
+  have := filter.empty_not_mem l,
+  rw ← hs at this,
+  exact this hl,
+  rcases hs with ⟨ x, hx ⟩,
+  simp at hx,
+  exact hx,
+end
+
+lemma tendsto_uniformly_on.tendsto_at
+  {ι : Type*}
+  {α : Type*}
+  {β : Type*}
+  [uniform_space β]
+  {l : filter ι}
+  {s : set α}
+  {f : ι → α → β}
+  {g : α → β}
+  (hfg' : tendsto_uniformly_on f g l s) {x : α} (hx : x ∈ s) :
+  filter.tendsto (λ n, f n x) l (nhds (g x)) :=
+begin
+  sorry,
+end
+
+lemma blah {α : Type*} {α' : Type*} {β : Type*} {f : α → β} {l : filter α} {l' : filter α'} {p : filter β}:
+  filter.tendsto (λ a : α × α', f a.fst) (l.prod l') p ↔ filter.tendsto f l p :=
+begin
+  split,
+  intros h,
+  sorry,
+  intros h,
+  have := @filter.tendsto_id _ l',
+  exact filter.tendsto_fst.comp (h.prod_map this),
+
+end
+
+lemma blah' {α : Type*} {α' : Type*} {β : Type*} {f : α → β} {l : filter α} {l' : filter α'} {p : filter β}:
+  filter.tendsto (λ a : α' × α, f a.snd) (l'.prod l) p ↔ filter.tendsto f l p :=
+begin
+  split,
+  intros h,
+  sorry,
+  intros h,
+  have := @filter.tendsto_id _ l',
+  exact filter.tendsto_snd.comp (this.prod_map h),
+
+end
+
+lemma tendsto_prod_principal_iff
+  {ι : Type*}
+  {α : Type*}
+  {β : Type*}
+  [uniform_space β]
+  {l : filter ι}
+  {s : set α}
+  {f : ι → α → β}
+  {c : β} : filter.tendsto ↿f (l.prod (filter.principal s)) (nhds c) ↔ tendsto_uniformly_on f (λ _, c) l s :=
+begin
+  sorry,
+end
+
+
+end generic
+
 open filter metric
 open_locale uniformity filter topological_space
 
@@ -38,41 +118,48 @@ section limits_of_derivatives
 
 variables {E : Type*} [normed_group E] [normed_space ℝ E]
   {𝕜 : Type*} [is_R_or_C 𝕜] [normed_space 𝕜 E]
-  {G : Type*} [normed_group G] [normed_space ℝ G] [normed_space 𝕜 G]
+  {G : Type*} [normed_group G] [normed_space 𝕜 G]
   {f : ℕ → E → G} {g : E → G} {f' : ℕ → (E → (E →L[𝕜] G))} {g' : E → (E →L[𝕜] G)}
-  {s : set E} {y z : E} {C : ℝ}
+  {s : set E} {x : E} {C : ℝ}
 
 /-- A convenience theorem for utilizing the mean value theorem for differences of
 differentiable functions -/
-lemma mean_value_theorem_for_differences {f : E → G} {f' : E → (E →L[𝕜] G)} (hs : convex ℝ s)
-  (hf : ∀ (y : E), y ∈ s → has_fderiv_at f (f' y) y)
-  (hg : ∀ (y : E), y ∈ s → has_fderiv_at g (g' y) y)
-  (hbound : ∀ (y : E), y ∈ s → ∥f' y - g' y∥ ≤ C) (hy : y ∈ s) (hz : z ∈ s) :
-  ∥y - z∥⁻¹ * ∥(f y - g y) - (f z - g z)∥ ≤ C :=
+lemma mean_value_theorem_for_differences
+  {f : E → G} {f' : E → (E →L[𝕜] G)}
+  (hf : ∀ᶠ y in 𝓝 x, has_fderiv_at f (f' y) y)
+  (hg : ∀ᶠ y in 𝓝 x, has_fderiv_at g (g' y) y)
+  (hbound : ∀ᶠ y in 𝓝 x, ∥f' y - g' y∥ ≤ C) :
+  ∀ᶠ y in 𝓝 x, ∥y - x∥⁻¹ * ∥(f y - g y) - (f x - g x)∥ ≤ C :=
 begin
+
+  obtain ⟨r, hr, h⟩ := nhds_basis_closed_ball.eventually_iff.mp (((hf.and hg).and hbound)),
+  rw nhds_basis_closed_ball.eventually_iff,
+  use [r, hr],
+  intros y hy,
+
+  have hxx : x ∈ closed_ball x r, simp only [hr.le, mem_closed_ball, dist_self],
+
   -- Differences of differentiable functions are differentiable
-  have hderiv : ∀ (y : E), y ∈ s →
-    has_fderiv_within_at (f - g) ((f' - g') y) s y,
+  have hderiv : ∀ (y : E), y ∈ closed_ball x r →
+    has_fderiv_within_at (f - g) ((f' - g') y) (closed_ball x r) y,
   { intros y hy,
-    have := ((hf y hy).sub (hg y hy)).has_fderiv_within_at,
-    simp only [pi.sub_apply],
-    have : (λ x : E, f x - g x) = f - g, { funext, simp only [pi.sub_apply], },
-    rwa ←this, },
+    obtain ⟨⟨hf, hg⟩, hbound⟩ := h hy,
+    exact (hf.sub hg).has_fderiv_within_at, },
 
   -- Apply the mean value theorem
   have := convex.norm_image_sub_le_of_norm_has_fderiv_within_le
-    hderiv hbound hs hz hy,
+    hderiv (λ y hy, (h hy).right) (convex_closed_ball x r) hxx hy,
 
   -- Auxiliary lemmas necessary for algebraic manipulation
-  have h_le : ∥y - z∥⁻¹ ≤ ∥y - z∥⁻¹, { exact le_refl _, },
+  have h_le : ∥y - x∥⁻¹ ≤ ∥y - x∥⁻¹, { exact le_refl _, },
   have C_nonneg : 0 ≤ C,
-  { calc 0 ≤ ∥f' y - g' y∥ : norm_nonneg _ ... ≤ C : hbound y hy, },
-  have h_le' : 0 ≤ C * ∥y - z∥, exact mul_nonneg C_nonneg (by simp),
+  { calc 0 ≤ ∥f' y - g' y∥ : norm_nonneg _ ... ≤ C : (h hy).right, },
+  have h_le' : 0 ≤ C * ∥y - x∥, exact mul_nonneg C_nonneg (by simp),
 
   -- The case y = z is degenerate. Eliminate it
-  by_cases h : y = z,
+  by_cases h : y = x,
   { simp only [h, C_nonneg, sub_self, norm_zero, mul_zero], },
-  have h_ne_zero : ∥y - z∥ ≠ 0,
+  have h_ne_zero : ∥y - x∥ ≠ 0,
   { simp only [ne.def, norm_eq_zero],
     exact λ hh, h (sub_eq_zero.mp hh), },
 
@@ -87,7 +174,7 @@ end
 in fact for a fixed `y`, the difference quotients `∥z - y∥⁻¹ • (f_n z - f_n y)` converge
 _uniformly_ to `∥z - y∥⁻¹ • (g z - g y)` -/
 lemma difference_quotients_converge_uniformly (hs : convex ℝ s)
-  (hf : ∀ (n : ℕ), ∀ (y : E), y ∈ s → has_fderiv_at (f n) (f' n y) y)
+  (hf : ∀ (y : E), y ∈ s → ∀ᶠ (n : ℕ) in at_top, has_fderiv_at (f n) (f' n y) y)
   (hfg : ∀ (y : E), y ∈ s → tendsto (λ n, f n y) at_top (𝓝 (g y)))
   (hfg' : tendsto_uniformly_on f' g' at_top s) :
   ∀ y : E, y ∈ s →
@@ -158,12 +245,8 @@ lemma uniform_convergence_of_uniform_convergence_derivatives
   tendsto_uniformly_on f g at_top s :=
 begin
   -- The case s is empty is trivial. Elimintate it and extract a base point `x`
-  by_cases hs' : ¬s.nonempty,
-  { rw set.not_nonempty_iff_eq_empty at hs',
-    rw hs',
-    exact tendsto_uniformly_on_of_empty, },
-  push_neg at hs',
-  cases hs' with x hx,
+  rcases set.eq_empty_or_nonempty s with rfl | ⟨x, hx⟩,
+  { exact tendsto_uniformly_on_of_empty, },
 
   -- Get a bound on s and get it into the format we need it in
   cases hs with C hC,
@@ -234,31 +317,99 @@ begin
   --   simpa using h, },
 end
 
+lemma filter.tendsto.mono_left_congr
+  {α : Type*} {β : Type*} {f g : α → β} {x y : filter α} {z : filter β}
+  (hx : tendsto f x z) (hfg : f = g) (h : y ≤ x) : tendsto g y z :=
+begin
+  sorry,
+end
+
+lemma fdfdfd {a b : ℝ} :
+  (a : 𝕜) = (b : 𝕜) → a = b :=
+  begin
+  squeeze_simp,
+  end
+
+
 /-- (d/dx) lim_{n → ∞} f_n x = lim_{n → ∞} f'_n x on a closed ball when the f'_n
-converge _uniformly_ to their limit. -/
-lemma has_fderiv_at_of_tendsto_uniformly_on {x : E} {r : ℝ}
-  (hf : ∀ (n : ℕ), ∀ (y : E), y ∈ closed_ball x r → has_fderiv_at (f n) (f' n y) y)
-  (hfg : ∀ (y : E), y ∈ closed_ball x r → tendsto (λ n, f n y) at_top (𝓝 (g y)))
-  (hfg' : tendsto_uniformly_on f' g' at_top (closed_ball x r)) :
-  ∀ y : E, y ∈ ball x r → has_fderiv_at g (g' y) y :=
+converge _uniformly_ to their limit.
+
+TODO (khw): This statement ends up being a bit awkward because we have to explicitly include
+a set `s ∈ 𝓝 x` in the assumptions. This could be obviated if we defined a notion of
+`tendsto_uniformly_at` which would be equivalent to
+`tendsto (λ a, f a.fst a.snd - g.snd) (l ×ᶠ 𝓝 x) (𝓝 0)`. However, I'm not certain of its utility.
+-/
+lemma has_fderiv_at_of_tendsto_uniformly_on
+  {s : set E} {hs : s ∈ 𝓝 x}
+  (hf : ∀ᶠ y in 𝓝 x, ∀ᶠ (n:ℕ) in at_top, has_fderiv_at (f n) (f' n y) y)
+  (hfg : ∀ᶠ y in 𝓝 x, tendsto (λ n, f n y) at_top (𝓝 (g y)))
+  (hfg' : tendsto_uniformly_on f' g' at_top s) :
+  has_fderiv_at g (g' x) x :=
 begin
   -- We do the famous "ε / 3 proof" which will involve several bouts of utilizing
-  -- uniform continuity. First we setup our goal in terms of ε and δ
-  intros y hy,
+  -- uniform continuity. First, we setup our goal for easier algebraic manipulation
   rw has_fderiv_at_iff_tendsto,
-  -- rw tendsto_iff_eventually,
-  -- intros p hp,
+  conv
+  { congr, funext, rw [←norm_norm, ←norm_inv, ←norm_smul], },
+  rw ←tendsto_zero_iff_norm_tendsto_zero,
 
-  have hyc : y ∈ closed_ball x r,
-  { exact (mem_ball.mp hy).le, },
+  -- Next we need to shrink `s` until `hf` and `hfg` apply, and that `s` is bounded and convex
+  -- so that we can apply the mean value theorem.
+  obtain ⟨r', hr', h'⟩ := nhds_basis_closed_ball.eventually_iff.mp (hf.and hfg),
+  obtain ⟨r, hr, h⟩ := nhds_basis_closed_ball.mem_iff.mp hs,
+  let s' := closed_ball x (min r r'),
+  have hs' : s' ∈ 𝓝 x, sorry,
+  have hxs : x ∈ s', sorry,
+  have hss' : s' ⊆ s, sorry,
+  have hss'' : s' ⊆ closed_ball x r', sorry,
+  have hsc : convex ℝ s', sorry,
+  have hsb : bounded s', sorry,
+  have hfg' : tendsto_uniformly_on f' g' at_top s', sorry,
+  obtain ⟨hf, hfg⟩ := ball_and_distrib.mp (ball_mem_mono hss'' h'),
+
+  -- Next we replace 𝓝 x with 𝓝[s] x and upgrade our goal to include `N`
+  refine tendsto.mono_left _ (le_inf rfl.le (le_principal_iff.mpr hs')),
+  apply (@blah' _ _ _ _ _ (at_top : filter ℕ) _).mp,
+
+  -- Now break the goal into each of the `ε/3` components
+  have : (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • (g a.snd - g x - (g' x) (a.snd - x))) =
+    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • (g a.snd - g x - (f a.fst a.snd - f a.fst x))) +
+    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • ((f a.fst a.snd - f a.fst x) - ((f' a.fst x) a.snd - (f' a.fst x) x))) +
+    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • ((f' a.fst x - g' x) (a.snd - x))),
+  { ext, simp only [pi.add_apply], rw [←smul_add, ←smul_add], congr,
+  simp only [map_sub, sub_add_sub_cancel, continuous_linear_map.coe_sub', pi.sub_apply], },
+  rw this,
+  have : 𝓝 (0 : G) = 𝓝 (0 + 0 + 0), simp,
+  rw this,
+  refine tendsto.add (tendsto.add _ _) _,
 
   -- convergence of the primal and uniform convergence of the derivatives implies
   -- uniform convergence of the difference quotients
-  have hdiff := difference_quotients_converge_uniformly (convex_closed_ball x r) hf hfg hfg' y hyc,
+  have hdiff := difference_quotients_converge_uniformly hsc hf hfg hfg' x hxs,
+  rw normed_group.fooooo at hdiff,
+  have : (0 : E → G) = (λ x:E, 0), ext, simp,
+  rw this at hdiff,
+  simp at hdiff ⊢,
+  rw ←tendsto_prod_principal_iff at hdiff,
+  -- norm_cast at hdiff,
+  rw tendsto_zero_iff_norm_tendsto_zero,
+  conv { congr, funext, rw smul_sub, rw norm_sub_rev, },
+  rw ←tendsto_zero_iff_norm_tendsto_zero,
+  refine hdiff.mono_left_congr _ _,
+  ext, simp [function.has_uncurry.uncurry], norm_cast,
+  sorry,
+
+  simp,
 
   -- The first (ε / 3) comes from the convergence of the derivatives
   -- have hfg' := hfg'.uniform_cauchy_seq_on,
+  -- use filter.tendsto.mono_left on 𝓟 s ⊓ 𝓝 y = 𝓝[s] y
   rw normed_group.fooooo at hfg',
+  have : (0 : E → (E →L[𝕜] G)) = (λ x:E, 0), ext, simp,
+  rw this at hfg',
+  rw ←tendsto_prod_principal_iff at hdiff,
+
+  have := (hfg'.tendsto_at hyc),
 
   -- The second (ε / 3) comes from the uniform convergence of the difference quotients
   rw normed_group.fooooo at hdiff,
