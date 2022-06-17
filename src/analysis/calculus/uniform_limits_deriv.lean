@@ -331,6 +331,11 @@ lemma fdfdfd {a b : ℝ} :
   end
 
 
+lemma fooo {x : ℝ} : ∥x∥ = ∥(x : 𝕜)∥ :=
+begin
+  exact (is_R_or_C.norm_of_real x).symm,
+end
+
 /-- (d/dx) lim_{n → ∞} f_n x = lim_{n → ∞} f'_n x on a closed ball when the f'_n
 converge _uniformly_ to their limit.
 
@@ -350,7 +355,7 @@ begin
   -- uniform continuity. First, we setup our goal for easier algebraic manipulation
   rw has_fderiv_at_iff_tendsto,
   conv
-  { congr, funext, rw [←norm_norm, ←norm_inv, ←norm_smul], },
+  { congr, funext, rw [←norm_norm, ←norm_inv, ←@is_R_or_C.norm_of_real 𝕜 _ _, is_R_or_C.of_real_inv, ←norm_smul], },
   rw ←tendsto_zero_iff_norm_tendsto_zero,
 
   -- Next we need to shrink `s` until `hf` and `hfg` apply, and that `s` is bounded and convex
@@ -372,10 +377,10 @@ begin
   apply (@blah' _ _ _ _ _ (at_top : filter ℕ) _).mp,
 
   -- Now break the goal into each of the `ε/3` components
-  have : (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • (g a.snd - g x - (g' x) (a.snd - x))) =
-    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • (g a.snd - g x - (f a.fst a.snd - f a.fst x))) +
-    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • ((f a.fst a.snd - f a.fst x) - ((f' a.fst x) a.snd - (f' a.fst x) x))) +
-    (λ a : ℕ × E, ∥a.snd - x∥⁻¹ • ((f' a.fst x - g' x) (a.snd - x))),
+  have : (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (g' x) (a.snd - x))) =
+    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (f a.fst a.snd - f a.fst x))) +
+    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f a.fst a.snd - f a.fst x) - ((f' a.fst x) a.snd - (f' a.fst x) x))) +
+    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f' a.fst x - g' x) (a.snd - x))),
   { ext, simp only [pi.add_apply], rw [←smul_add, ←smul_add], congr,
   simp only [map_sub, sub_add_sub_cancel, continuous_linear_map.coe_sub', pi.sub_apply], },
   rw this,
@@ -389,17 +394,18 @@ begin
   rw normed_group.fooooo at hdiff,
   have : (0 : E → G) = (λ x:E, 0), ext, simp,
   rw this at hdiff,
-  simp at hdiff ⊢,
+  simp only at hdiff ⊢,
   rw ←tendsto_prod_principal_iff at hdiff,
   -- norm_cast at hdiff,
   rw tendsto_zero_iff_norm_tendsto_zero,
   conv { congr, funext, rw smul_sub, rw norm_sub_rev, },
   rw ←tendsto_zero_iff_norm_tendsto_zero,
   refine hdiff.mono_left_congr _ _,
-  ext, simp [function.has_uncurry.uncurry], norm_cast,
-  sorry,
+  ext, simp only [function.has_uncurry.uncurry, id.def], refine filter.prod_mono rfl.le inf_le_right,
 
-  simp,
+  sorry,
+  -- rw ←tendsto_prod_principal_iff at hfg',
+
 
   -- The first (ε / 3) comes from the convergence of the derivatives
   -- have hfg' := hfg'.uniform_cauchy_seq_on,
@@ -407,7 +413,9 @@ begin
   rw normed_group.fooooo at hfg',
   have : (0 : E → (E →L[𝕜] G)) = (λ x:E, 0), ext, simp,
   rw this at hfg',
-  rw ←tendsto_prod_principal_iff at hdiff,
+  rw ←tendsto_prod_principal_iff at hfg',
+  simp only at hfg' ⊢,
+  refine hfg'.mono_left_congr _ _,
 
   have := (hfg'.tendsto_at hyc),
 
