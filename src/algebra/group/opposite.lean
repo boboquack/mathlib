@@ -166,11 +166,10 @@ semiconj_by_unop
 /-- The function `mul_opposite.op` is an additive equivalence. -/
 @[simps { fully_applied := ff, simp_rhs := tt }]
 def op_add_equiv [has_add α] : α ≃+ αᵐᵒᵖ :=
-{ map_add' := λ a b, rfl, .. op_equiv }
+{ map_add' := λ a b, rfl, .. op }
 
-@[simp] lemma op_add_equiv_to_equiv [has_add α] :
-  (op_add_equiv : α ≃+ αᵐᵒᵖ).to_equiv = op_equiv :=
-rfl
+@[simp] lemma op_add_equiv_to_equiv [has_add α] : (op_add_equiv : α ≃+ αᵐᵒᵖ).to_equiv = op :=
+fun_like.ext _ _ $ λ _, rfl
 
 end mul_opposite
 
@@ -220,11 +219,9 @@ variable {α}
 /-- The function `add_opposite.op` is a multiplicative equivalence. -/
 @[simps { fully_applied := ff, simp_rhs := tt }]
 def op_mul_equiv [has_mul α] : α ≃* αᵃᵒᵖ :=
-{ map_mul' := λ a b, rfl, .. op_equiv }
+{ map_mul' := λ a b, rfl, .. op }
 
-@[simp] lemma op_mul_equiv_to_equiv [has_mul α] :
-  (op_mul_equiv : α ≃* αᵃᵒᵖ).to_equiv = op_equiv :=
-rfl
+@[simp] lemma op_mul_equiv_to_equiv [has_mul α] : (op_mul_equiv : α ≃* αᵃᵒᵖ).to_equiv = op := rfl
 
 end add_opposite
 
@@ -236,7 +233,7 @@ open mul_opposite
 is commutative, there is `add_equiv.inv`.", simps { fully_applied := ff, simp_rhs := tt }]
 def mul_equiv.inv' (G : Type*) [division_monoid G] : G ≃* Gᵐᵒᵖ :=
 { map_mul' := λ x y, unop_injective $ mul_inv_rev x y,
-  .. (equiv.inv G).trans op_equiv }
+  .. (equiv.inv G).trans op }
 
 /-- A semigroup homomorphism `f : M →ₙ* N` such that `f x` commutes with `f y` for all `x, y`
 defines a semigroup homomorphism to `Nᵐᵒᵖ`. -/
@@ -284,7 +281,7 @@ def monoid_hom.from_opposite {M N : Type*} [mul_one_class M] [mul_one_class N] (
 @[to_additive "The additive units of the additive opposites are equivalent to the additive opposites
 of the additive units."]
 def units.op_equiv {M} [monoid M] : (Mᵐᵒᵖ)ˣ ≃* (Mˣ)ᵐᵒᵖ :=
-{ to_fun := λ u, op ⟨unop u, unop ↑(u⁻¹), op_injective u.4, op_injective u.3⟩,
+{ to_fun := λ u, op (⟨unop ↑u, unop ↑(u⁻¹), op_injective u.4, op_injective u.3⟩ : Mˣ),
   inv_fun := mul_opposite.rec $ λ u, ⟨op ↑(u), op ↑(u⁻¹), unop_injective $ u.4, unop_injective u.3⟩,
   map_mul' := λ x y, unop_injective $ units.ext $ rfl,
   left_inv := λ x, units.ext $ by simp,

@@ -246,7 +246,7 @@ variables (R) [non_unital_comm_semiring R]
 def to_opposite : R ≃+* Rᵐᵒᵖ :=
 { map_add' := λ x y, rfl,
   map_mul' := λ x y, mul_comm (op y) (op x),
-  .. mul_opposite.op_equiv }
+  .. mul_opposite.op }
 
 @[simp]
 lemma to_opposite_apply (r : R) : to_opposite R r = op r := rfl

@@ -48,11 +48,11 @@ namespace mul_opposite
 
 /-- The element of `mul_opposite α` that represents `x : α`. -/
 @[pp_nodot, to_additive "The element of `αᵃᵒᵖ` that represents `x : α`."]
-def op : α → αᵐᵒᵖ := id
+def op : α ≃ αᵐᵒᵖ := equiv.refl _
 
 /-- The element of `α` represented by `x : αᵐᵒᵖ`. -/
 @[pp_nodot, to_additive "The element of `α` represented by `x : αᵃᵒᵖ`."]
-def unop : αᵐᵒᵖ → α := id
+def unop : αᵐᵒᵖ ≃ α := equiv.refl _
 
 attribute [pp_nodot] add_opposite.op add_opposite.unop
 
@@ -60,6 +60,8 @@ attribute [pp_nodot] add_opposite.op add_opposite.unop
 @[simp, to_additive] lemma op_unop (x : αᵐᵒᵖ) : op (unop x) = x := rfl
 @[simp, to_additive] lemma op_comp_unop : (op : α → αᵐᵒᵖ) ∘ unop = id := rfl
 @[simp, to_additive] lemma unop_comp_op : (unop : αᵐᵒᵖ → α) ∘ op = id := rfl
+@[simp, to_additive] lemma op_symm : (@op α).symm = unop := rfl
+@[simp, to_additive] lemma unop_symm : (@unop α).symm = op := rfl
 
 attribute [irreducible] mul_opposite
 
@@ -68,13 +70,8 @@ attribute [irreducible] mul_opposite
 protected def rec {F : Π (X : αᵐᵒᵖ), Sort v} (h : Π X, F (op X)) : Π X, F X :=
 λ X, h (unop X)
 
-/-- The canonical bijection between `α` and `αᵐᵒᵖ`. -/
-@[to_additive "The canonical bijection between `α` and `αᵃᵒᵖ`.",
-  simps apply symm_apply { fully_applied := ff }]
-def op_equiv : α ≃ αᵐᵒᵖ := ⟨op, unop, unop_op, op_unop⟩
-
-@[to_additive] lemma op_bijective : bijective (op : α → αᵐᵒᵖ) := op_equiv.bijective
-@[to_additive] lemma unop_bijective : bijective (unop : αᵐᵒᵖ → α) := op_equiv.symm.bijective
+@[to_additive] lemma op_bijective : bijective (op : α → αᵐᵒᵖ) := op.bijective
+@[to_additive] lemma unop_bijective : bijective (unop : αᵐᵒᵖ → α) := unop.bijective
 @[to_additive] lemma op_injective : injective (op : α → αᵐᵒᵖ) := op_bijective.injective
 @[to_additive] lemma op_surjective : surjective (op : α → αᵐᵒᵖ) := op_bijective.surjective
 @[to_additive] lemma unop_injective : injective (unop : αᵐᵒᵖ → α) := unop_bijective.injective

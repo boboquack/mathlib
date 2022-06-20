@@ -3146,7 +3146,7 @@ def opposite (H : subgroup G) : subgroup Gᵐᵒᵖ :=
 /-- Bijection between a subgroup `H` and its opposite. -/
 @[to_additive "Bijection between an additive subgroup `H` and its opposite.", simps]
 def opposite_equiv (H : subgroup G) : H ≃ H.opposite :=
-mul_opposite.op_equiv.subtype_equiv $ λ _, iff.rfl
+mul_opposite.op.subtype_equiv $ λ _, iff.rfl
 
 @[to_additive] instance (H : subgroup G) [encodable H] : encodable H.opposite :=
 encodable.of_equiv H H.opposite_equiv.symm

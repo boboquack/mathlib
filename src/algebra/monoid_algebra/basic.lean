@@ -859,7 +859,7 @@ the `monoid_algebra Rᵐᵒᵖ Iᵐᵒᵖ` over the opposite ring, taking elemen
     simp
   end,
   ..op_add_equiv.symm.trans $ (finsupp.map_range.add_equiv (op_add_equiv : k ≃+ kᵐᵒᵖ)).trans $
-    finsupp.dom_congr op_equiv }
+    finsupp.dom_congr op }
 
 @[simp] lemma op_ring_equiv_single [monoid G] (r : k) (x : G) :
   monoid_algebra.op_ring_equiv (op (single x r)) = single (op x) (op r) :=

@@ -50,9 +50,10 @@ def unsym : αˢʸᵐ ≃ α := equiv.refl _
 
 @[simp] lemma unsym_sym (a : α) : unsym (sym a) = a := rfl
 @[simp] lemma sym_unsym (a : α) : sym (unsym a) = a := rfl
-
 @[simp] lemma sym_comp_unsym : (sym : α → αˢʸᵐ) ∘ unsym = id := rfl
 @[simp] lemma unsym_comp_sym : (unsym : αˢʸᵐ → α) ∘ sym = id := rfl
+@[simp] lemma sym_symm : (@sym α).symm = unsym := rfl
+@[simp] lemma unsym_symm : (@unsym α).symm = sym := rfl
 
 lemma sym_bijective : bijective (sym : α → αˢʸᵐ) := sym.bijective
 lemma unsym_bijective : bijective (unsym : αˢʸᵐ → α) := unsym.symm.bijective

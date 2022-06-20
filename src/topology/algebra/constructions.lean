@@ -42,7 +42,7 @@ continuous_induced_rng continuous_id
 /-- `mul_opposite.op` as a homeomorphism. -/
 @[to_additive "`add_opposite.op` as a homeomorphism."]
 def op_homeomorph : M ≃ₜ Mᵐᵒᵖ :=
-{ to_equiv := op_equiv,
+{ to_equiv := op,
   continuous_to_fun := continuous_op,
   continuous_inv_fun := continuous_unop }
 

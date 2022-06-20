@@ -117,7 +117,7 @@ attribute [simp] star_mul
 def star_mul_equiv [semigroup R] [star_semigroup R] : R ≃* Rᵐᵒᵖ :=
 { to_fun := λ x, mul_opposite.op (star x),
   map_mul' := λ x y, (star_mul x y).symm ▸ (mul_opposite.op_mul _ _),
-  ..(has_involutive_star.star_involutive.to_perm star).trans op_equiv}
+  ..(has_involutive_star.star_involutive.to_perm star).trans op }
 
 /-- `star` as a `mul_aut` for commutative `R`. -/
 @[simps apply]
