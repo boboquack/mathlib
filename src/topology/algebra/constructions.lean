@@ -44,7 +44,7 @@ continuous_induced_rng continuous_id
 def op_homeomorph : M ≃ₜ Mᵐᵒᵖ :=
 { to_equiv := op,
   continuous_to_fun := continuous_op,
-  continuous_inv_fun := continuous_unop }
+  continuous_inv_fun := by { rw ←unop_symm, exact continuous_unop } }
 
 @[simp, to_additive] lemma map_op_nhds (x : M) : map (op : M → Mᵐᵒᵖ) (𝓝 x) = 𝓝 (op x) :=
 op_homeomorph.map_nhds_eq x
