@@ -31,12 +31,12 @@ def op_linear_equiv : M ≃ₗ[R] Mᵐᵒᵖ :=
 @[simp] lemma coe_op_linear_equiv :
   (op_linear_equiv R : M → Mᵐᵒᵖ) = op := rfl
 @[simp] lemma coe_op_linear_equiv_symm :
-  ((op_linear_equiv R).symm : Mᵐᵒᵖ → M) = unop := rfl
+  ((op_linear_equiv R).symm : Mᵐᵒᵖ → M) = unop := by { rw ←op_symm, refl }
 
 @[simp] lemma coe_op_linear_equiv_to_linear_map :
   ((op_linear_equiv R).to_linear_map : M → Mᵐᵒᵖ) = op := rfl
 @[simp] lemma coe_op_linear_equiv_symm_to_linear_map :
-  ((op_linear_equiv R).symm.to_linear_map : Mᵐᵒᵖ → M) = unop := rfl
+  ((op_linear_equiv R).symm.to_linear_map : Mᵐᵒᵖ → M) = unop := by { rw ←op_symm, refl }
 
 @[simp] lemma op_linear_equiv_to_add_equiv :
   (op_linear_equiv R : M ≃ₗ[R] Mᵐᵒᵖ).to_add_equiv = op_add_equiv := rfl
