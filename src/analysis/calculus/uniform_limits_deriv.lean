@@ -41,6 +41,20 @@ lemma ball_mem_mono
 (∀ x : α, x ∈ s → p x) → (∀ x : α, x ∈ s' → p x) :=
 λ h x hx, h x (calc x ∈ s' : hx ... ⊆ s : hs)
 
+open filter
+open_locale topological_space filter
+
+lemma tendsto_prod_nhds_within_iff
+  {α β ι : Type*} [uniform_space β] [topological_space α]
+  {F : ι → α → β} {c : β} {p : filter ι} {s : set α} :
+  ∀ y : α, y ∈ s → tendsto ↿F (p ×ᶠ (𝓝[s] y)) (𝓝 c) ↔
+  tendsto_locally_uniformly_on F (λ _x, c) p s :=
+begin
+  sorry,
+end
+
+
+
 lemma filter.eventually.ne_bot_of_prop
   {ι : Type*} (l : filter ι) [l.ne_bot] (p : Prop)
   (hl : ∀ᶠ i in l, p) : p :=
@@ -111,8 +125,14 @@ end
 
 end generic
 
-open filter metric
+open filter
 open_locale uniformity filter topological_space
+
+lemma blah'' {ι : Type*} {p : Prop} {l : filter ι} [l.ne_bot] :
+  (∀ᶠ i in l, p) → p :=
+begin
+  simp only [eventually_const, imp_self],
+end
 
 section limits_of_derivatives
 
@@ -324,16 +344,39 @@ begin
   sorry,
 end
 
-lemma fdfdfd {a b : ℝ} :
-  (a : 𝕜) = (b : 𝕜) → a = b :=
-  begin
-  squeeze_simp,
-  end
-
-
-lemma fooo {x : ℝ} : ∥x∥ = ∥(x : 𝕜)∥ :=
+lemma asdfasdf {f : E → G} {l : filter E} {l' : filter G} {p : filter ℕ} :
+  tendsto f l l' → tendsto (λ x : (ℕ × E), f x.snd) (p ×ᶠ l) l' :=
 begin
-  exact (is_R_or_C.norm_of_real x).symm,
+  intros h,
+  unfold tendsto at h ⊢,
+  have : map f l = map (λ (x : ℕ × E), f x.snd) (p ×ᶠ l), {
+    ext,
+    split,
+    simp,
+    intros hh,
+    rw mem_prod_iff,
+    use set.univ,
+    simp,
+    use  f ⁻¹' s,
+    simp [hh],
+    rw set.subset_def,
+    intros x hx,
+    simp at hx,
+    simp,
+    exact hx,
+
+    simp,
+    intros hh,
+    rw mem_prod_iff at hh,
+    rcases hh with ⟨a, b, c, d, e⟩,
+    rw set.subset_def at e,
+    rw pr
+  },
+  rw tendsto_iff_eventually at h ⊢,
+  intros prop hp,
+  specialize h hp,
+
+  sorry,
 end
 
 /-- (d/dx) lim_{n → ∞} f_n x = lim_{n → ∞} f'_n x on a closed ball when the f'_n
@@ -360,21 +403,72 @@ begin
 
   -- Next we need to shrink `s` until `hf` and `hfg` apply, and that `s` is bounded and convex
   -- so that we can apply the mean value theorem.
-  obtain ⟨r', hr', h'⟩ := nhds_basis_closed_ball.eventually_iff.mp (hf.and hfg),
-  obtain ⟨r, hr, h⟩ := nhds_basis_closed_ball.mem_iff.mp hs,
-  let s' := closed_ball x (min r r'),
+  obtain ⟨r', hr', h'⟩ := metric.nhds_basis_closed_ball.eventually_iff.mp (hf.and hfg),
+  obtain ⟨r, hr, h⟩ := metric.nhds_basis_closed_ball.mem_iff.mp hs,
+  let s' := metric.closed_ball x (min r r'),
   have hs' : s' ∈ 𝓝 x, sorry,
   have hxs : x ∈ s', sorry,
   have hss' : s' ⊆ s, sorry,
-  have hss'' : s' ⊆ closed_ball x r', sorry,
+  have hss'' : s' ⊆ metric.closed_ball x r', sorry,
   have hsc : convex ℝ s', sorry,
-  have hsb : bounded s', sorry,
+  have hsb : metric.bounded s', sorry,
   have hfg' : tendsto_uniformly_on f' g' at_top s', sorry,
-  obtain ⟨hf, hfg⟩ := ball_and_distrib.mp (ball_mem_mono hss'' h'),
+  obtain ⟨hf1, hfg1⟩ := ball_and_distrib.mp (ball_mem_mono hss'' h'),
 
   -- Next we replace 𝓝 x with 𝓝[s] x and upgrade our goal to include `N`
   refine tendsto.mono_left _ (le_inf rfl.le (le_principal_iff.mpr hs')),
-  apply (@blah' _ _ _ _ _ (at_top : filter ℕ) _).mp,
+  -- apply (@eventually_const _ (at_top : filter ℕ) _ _).mp,
+  suffices :
+    tendsto_uniformly_on (λ n : ℕ, λ y : E, (∥y - x∥⁻¹ : 𝕜) • (g y - g x - (f n y - f n x))) (λ _x, 0) at_top s'
+    -- ∧ tendsto_uniformly_on (λ n : ℕ, λ e : E, (∥e - x∥⁻¹ : 𝕜) • ((f n x - f n x) - ((f' n x) e - (f' n x) x))) (λ _x, 0) at_top s'
+    ∧ tendsto_uniformly_on (λ n : ℕ, λ e : E, (∥e - x∥⁻¹ : 𝕜) • ((f' n x - g' x) (e - x))) (λ _x, 0) at_top s',
+
+    -- ∧ (∀ᶠ (n : ℕ) in at_top, tendsto (λ e : E, (∥e - x∥⁻¹ : 𝕜) • ((f' n x - g' x) (e - x))) (𝓝[s] x) (𝓝 0)),
+  {
+    rcases this with ⟨h1, h2⟩,
+    have := h1.add h2,
+    rw ←tendsto_prod_principal_iff at h1 h2,
+    specialize hf1 x hxs,
+    rw tendsto_iff_eventually,
+    intros prop,
+    intros hh,
+    have := (h1.eventually hh).and (h2.eventually hh),
+    apply (@eventually_const _ (at_top : filter ℕ) _ _).mp,
+    sorry,
+    -- suffices : ∀ᶠ (a : ℕ × E) in (at_top ×ᶠ (𝓝 x ⊓ 𝓟 s')), (λ a : ℕ × E, prop ((↑∥a.snd - x∥)⁻¹ • (g a.snd - g x - (g' x) (a.snd - x)))) a, {
+    --   sorry,
+    -- },
+    -- sorry,
+    -- -- apply eventually.curry,
+    -- -- have := h2.eventually hh,
+  },
+  split,
+  {
+    have hdiff := difference_quotients_converge_uniformly hsc hf1 hfg1 hfg' x hxs,
+    rw normed_group.fooooo at hdiff,
+    apply hdiff.congr_fun,
+    apply eventually_of_forall,
+    intros n,
+    intros z hz, simp,
+    sorry,
+  },
+  split,
+  {
+    sorry,
+  },
+  {
+    rw eventually_iff at hf,
+    rw mem_nhds_iff at hf,
+    rcases hf with ⟨t, ht, ht', ht''⟩,
+    have := set.mem_of_mem_of_subset ht'' ht,
+    simp only [set.mem_set_of_eq] at this,
+    apply this.mono,
+    intros n hn,
+    have := hn.has_fderiv_within_at,
+    rw has_fderiv_within_at_iff_tendsto at this,
+    simp_rw has_fderiv_within_at_iff_tendsto at this,
+    sorry,
+  },
 
   -- Now break the goal into each of the `ε/3` components
   have : (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (g' x) (a.snd - x))) =
@@ -383,7 +477,7 @@ begin
     (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f' a.fst x - g' x) (a.snd - x))),
   { ext, simp only [pi.add_apply], rw [←smul_add, ←smul_add], congr,
   simp only [map_sub, sub_add_sub_cancel, continuous_linear_map.coe_sub', pi.sub_apply], },
-  rw this,
+  simp_rw this,
   have : 𝓝 (0 : G) = 𝓝 (0 + 0 + 0), simp,
   rw this,
   refine tendsto.add (tendsto.add _ _) _,
@@ -403,6 +497,8 @@ begin
   refine hdiff.mono_left_congr _ _,
   ext, simp only [function.has_uncurry.uncurry, id.def], refine filter.prod_mono rfl.le inf_le_right,
 
+  simp only,
+  simp_rw has_fderiv_at_iff_tendsto at hf,
   sorry,
   -- rw ←tendsto_prod_principal_iff at hfg',
 
