@@ -5,7 +5,7 @@ Authors: Adam Topaz, Johan Commelin
 -/
 import group_theory.quotient_group
 import group_theory.subgroup.basic
-import algebra.category.Group.abelian
+import algebra.category.Group.basic
 import category_theory.epi_mono
 
 /-!
@@ -17,7 +17,7 @@ groups if and only if it is injective, and similarly an epimorphism if and only 
 
 universe u
 
-open category_theory category_theory.preadditive AddCommGroup
+open category_theory AddCommGroup
 
 namespace AddCommGroup
 
@@ -59,5 +59,13 @@ lemma epi_iff_range_eq_top : epi f ↔ f.range = ⊤ :=
 
 lemma epi_iff_surjective : epi f ↔ function.surjective f :=
 by rw [epi_iff_range_eq_top, add_monoid_hom.range_top_iff_surjective]
+
+instance forget_preserves_epimorphisms : (forget AddCommGroup.{u}).preserves_epimorphisms :=
+{ preserves := λ X Y f hf, by rwa [forget_map_eq_coe, category_theory.epi_iff_surjective,
+    ← epi_iff_surjective] }
+
+instance forget_preserves_monomorphisms : (forget AddCommGroup.{u}).preserves_monomorphisms :=
+{ preserves := λ X Y f hf, by rwa [forget_map_eq_coe, category_theory.mono_iff_injective,
+    ← mono_iff_injective] }
 
 end AddCommGroup
