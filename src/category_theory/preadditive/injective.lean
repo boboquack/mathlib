@@ -19,6 +19,7 @@ noncomputable theory
 
 open category_theory
 open category_theory.limits
+open opposite
 
 universes v u
 
@@ -158,6 +159,16 @@ instance {J : C} [injective J] : projective (opposite.op J) :=
   refine ⟨(@factor_thru C _ J _ _ _ f.unop e.unop _).op, _⟩,
   convert congr_arg quiver.hom.op (@comp_factor_thru C _ J _ _ _ f.unop e.unop _),
 end }
+
+lemma injective_iff_projective_op {J : C} : injective J ↔ projective (op J) :=
+⟨λ h, by exactI infer_instance, λ h, show injective (unop (op J)), by exactI infer_instance⟩
+
+lemma injective_iff_preserves_epimorphisms_yoneda_obj (J : C) :
+  injective J ↔ (yoneda.obj J).preserves_epimorphisms :=
+begin
+  rw [injective_iff_projective_op, projective.projective_iff_preserves_epimorphisms_coyoneda_obj],
+  exact functor.preserves_epimorphisms.iso_iff (coyoneda.obj_op_op _)
+end
 
 section enough_injectives
 variable [enough_injectives C]
