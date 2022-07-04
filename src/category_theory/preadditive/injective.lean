@@ -170,6 +170,33 @@ begin
   exact functor.preserves_epimorphisms.iso_iff (coyoneda.obj_op_op _)
 end
 
+section preadditive
+variables [preadditive C]
+
+lemma injective_iff_preserves_epimorphisms_preadditive_yoneda_obj (J : C) :
+  injective J ↔ (preadditive_yoneda.obj J).preserves_epimorphisms :=
+begin
+  rw injective_iff_preserves_epimorphisms_yoneda_obj,
+  refine ⟨λ (h : (preadditive_yoneda.obj J ⋙ (forget _)).preserves_epimorphisms), _, _⟩,
+  { exactI functor.preserves_epimorphisms_of_preserves_of_reflects (preadditive_yoneda.obj J)
+      (forget _) },
+  { introI,
+    exact (infer_instance : (preadditive_yoneda.obj J ⋙ forget _).preserves_epimorphisms) }
+end
+
+lemma injective_iff_preserves_epimorphisms_preadditive_yoneda_obj' (J : C) :
+  injective J ↔ (preadditive_yoneda_obj J).preserves_epimorphisms :=
+begin
+  rw injective_iff_preserves_epimorphisms_yoneda_obj,
+  refine ⟨λ (h : (preadditive_yoneda_obj J ⋙ (forget _)).preserves_epimorphisms), _, _⟩,
+  { exactI functor.preserves_epimorphisms_of_prerseves_of_reflects (preadditive_yoneda_obj J)
+      (forget _) },
+  { introI,
+    exact (infer_instance : (preadditive_yoneda_obj J ⋙ forget _).preserves_epimorphisms) }
+end
+
+end preadditive
+
 section enough_injectives
 variable [enough_injectives C]
 

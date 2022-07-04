@@ -70,6 +70,14 @@ instance reflects_epimorphisms_comp (F : C ⥤ D) (G : D ⥤ E) [reflects_epimor
   [reflects_epimorphisms G] : reflects_epimorphisms (F ⋙ G) :=
 { reflects := λ X Y f h, (F.epi_of_epi_map (G.epi_of_epi_map h)) }
 
+lemma preserves_epimorphisms_of_preserves_of_reflects (F : C ⥤ D) (G : D ⥤ E)
+  [preserves_epimorphisms (F ⋙ G)] [reflects_epimorphisms G] : preserves_epimorphisms F :=
+{ preserves := λ X Y f hf, G.epi_of_epi_map $ by { rw ← comp_map, resetI, apply_instance } }
+
+lemma preserves_monomorphisms_of_preserves_of_reflects (F : C ⥤ D) (G : D ⥤ E)
+  [preserves_monomorphisms (F ⋙ G)] [reflects_monomorphisms G] : preserves_monomorphisms F :=
+{ preserves := λ X Y f hf, G.mono_of_mono_map $ by { rw ← comp_map, resetI, apply_instance } }
+
 lemma preserves_monomorphisms.of_iso {F G : C ⥤ D} [preserves_monomorphisms F] (α : F ≅ G) :
   preserves_monomorphisms G :=
 { preserves := λ X Y f h,
