@@ -155,7 +155,7 @@ lemma projective_iff_preserves_epimorphisms_preadditive_coyoneda_obj' (P : C) :
 begin
   rw projective_iff_preserves_epimorphisms_coyoneda_obj,
   refine ⟨λ (h : (preadditive_coyoneda_obj (op P) ⋙ (forget _)).preserves_epimorphisms), _, _⟩,
-  { exactI functor.preserves_epimorphisms_of_preseeves_of_reflects (preadditive_coyoneda_obj (op P))
+  { exactI functor.preserves_epimorphisms_of_preserves_of_reflects (preadditive_coyoneda_obj (op P))
       (forget _) },
   { introI,
     exact (infer_instance : (preadditive_coyoneda_obj (op P) ⋙ forget _).preserves_epimorphisms) }
