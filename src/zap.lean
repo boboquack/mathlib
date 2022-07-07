@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2022 Alex J. Best, X.-F. Roblot. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors:  Alex J. Best, X-F. Roblot,
+Authors:  Alex J. Best, X-F. Roblot
 -/
 
 import number_theory.number_field
@@ -86,20 +86,20 @@ end
 -- local attribute [-instance] algebra_rat
 local attribute [-instance] complex.algebra
 
-example (a  b : ℤ) : a ≤ b ↔ (a : ℝ) ≤ (b : ℝ) :=
-begin
-  exact int.cast_le.symm,
-end
-
 lemma minpoly_coeff_le_of_all_abs_eq_one0 (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
   (hxi : is_integral ℤ x) (i : ℕ) :
   |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
 begin
-  have hmp : _, from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
+  have hmp : minpoly ℚ x = map (algebra_map ℤ ℚ) (minpoly ℤ x),
+    from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
   have hdg : (minpoly ℚ x).nat_degree = (minpoly ℤ x).nat_degree,
   { rw hmp,
     convert nat_degree_map_eq_of_injective _ _,
     exact (algebra_map ℤ ℚ).injective_int, },
+  have hsp : splits (algebra_map ℚ ℂ) (minpoly ℚ x) :=
+    is_alg_closed.splits_codomain (minpoly ℚ x),
+  have hrt :  multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots =
+    (minpoly ℚ x).nat_degree,  { exact (nat_degree_eq_card_roots hsp).symm, },
   by_cases hi : i ≤ (minpoly ℤ x).nat_degree,
   { suffices : complex.abs ((map (algebra_map ℚ ℂ) (minpoly ℚ x)).coeff i) ≤
           (minpoly ℤ x).nat_degree.choose i,
@@ -109,9 +109,7 @@ begin
       rw hmp,
       simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
       norm_cast, },
-    { have hsp : splits (algebra_map ℚ ℂ) (minpoly ℚ x) :=
-        is_alg_closed.splits_codomain (minpoly ℚ x),
-      rw eq_prod_roots_of_splits hsp,
+    { rw eq_prod_roots_of_splits hsp,
       rw monic.def.mp (minpoly.monic (is_separable.is_integral ℚ x)),
       rw ring_hom.map_one,
       rw map_one,
@@ -128,11 +126,12 @@ begin
       suffices : ∀ (t : multiset ℂ), t ∈ multiset.powerset_len ((minpoly ℚ x).nat_degree - i)
         (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots → complex.abs t.prod = 1,
       { rw multiset.map_congr (eq.refl _) this,
+        -- TODO. fix this horror
         simp only [*, multiset.map_const, multiset.card_powerset_len, multiset.sum_repeat,
          nat.smul_one_eq_coe, nat.cast_le, multiset.mem_powerset_len, and_imp, mem_set_of_eq],
-        rw ( _ : multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree),
-        swap, { sorry, }, -- rw hdg, exact (nat_degree_eq_card_roots hsp).symm },
         apply eq.le,
+        rw ←hmp,
+        rw_mod_cast hrt,
         repeat { rw hdg },
         exact nat.choose_symm hi,
       },
@@ -155,12 +154,17 @@ begin
             rw mem_root_set_iff _,
             rw aeval_def,
             rw mem_roots_map at hz,
-            exact_mod_cast hz,
-            sorry, sorry,
+            { exact_mod_cast hz, },
+            repeat
+            { rw hmp,
+              refine polynomial.monic.ne_zero _,
+              exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
             apply_instance, }}},
-    all_goals { sorry },
-    },
-  },
+      exact abs_zero,
+      exact abs_add,
+      rw hrt,
+      rw hdg,
+      exact hi, }},
   { push_neg at hi,
     rw nat.choose_eq_zero_of_lt hi,
     rw coeff_eq_zero_of_nat_degree_lt,
