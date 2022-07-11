@@ -75,7 +75,8 @@ end
 -- local attribute [-instance] algebra_rat
 local attribute [-instance] complex.algebra
 
-lemma minpoly_coeff_le_of_all_abs_eq_one0 (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
+/- TODO. generalize to |roots| ≤ bound C -/
+lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
   (hxi : is_integral ℤ x) (i : ℕ) :
   |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
 begin
@@ -135,94 +136,6 @@ begin
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt],
     { norm_cast, },
     { exact hi, }}
-end
-
-lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
-  (hxi : is_integral ℤ x) (i : ℕ) :
-  |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
-begin
-  sorry ; {
-  by_cases hi : i ≤ (minpoly ℤ x).nat_degree,
-  { have h_mins : minpoly ℚ x = (map (algebra_map ℤ ℚ) (minpoly ℤ x)),
-    from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
-    have h_degree : (minpoly ℚ x).nat_degree = (minpoly ℤ x).nat_degree,
-    { rw ( _ : (minpoly ℤ x).nat_degree = (map (algebra_map ℤ ℚ) (minpoly ℤ x)).nat_degree),
-      rwa h_mins,
-      have : function.injective (algebra_map ℤ ℚ), { exact (algebra_map ℤ ℚ).injective_int, },
-      rw polynomial.nat_degree_map_eq_of_injective this, },
-    suffices : abs ((minpoly ℚ x).coeff i : ℂ) ≤ (minpoly ℤ x).nat_degree.choose i,
-    { suffices : (|(minpoly ℤ x).coeff i| : ℝ) ≤ ↑((minpoly ℤ x).nat_degree.choose i),
-      { exact_mod_cast this, },
-      convert this,
-      simp only [h_mins, coeff_map, ring_hom.eq_int_cast, rat.cast_coe_int],
-      norm_cast, },
-    rw (by simp [coeff_map, ring_hom.eq_rat_cast] :
-      ((minpoly ℚ x).coeff i : ℂ) = ((minpoly ℚ x).map (algebra_map ℚ ℂ)).coeff i),
-    have : splits (algebra_map ℚ ℂ) (minpoly ℚ x),
-      from is_alg_closed.splits_codomain (minpoly ℚ x),
-    have h_roots : multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots =
-      (minpoly ℚ x).nat_degree, { exact (polynomial.nat_degree_eq_card_roots this).symm, },
-    rw eq_prod_roots_of_splits this,
-    simp only [monic.def.mp (minpoly.monic (is_separable.is_integral ℚ x)),
-        one_mul, ring_hom.map_one],
-
-    rw multiset.prod_X_sub_C_coeff,
-
-    swap, rwa [h_roots, h_degree],
-    simp only [is_absolute_value.abv_pow complex.abs, complex.abs_mul, complex.abs_neg,
-      complex.abs_one, one_pow, one_mul],
-    let T := (multiset.powerset_len (multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots - i)
-        (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots),
-    suffices : complex.abs (multiset.map multiset.prod T).sum  ≤
-      (multiset.map (λ t, (multiset.map complex.abs t).prod) T).sum,
-    { apply le_trans this,
-      suffices : ∀ t ∈ T, (multiset.map complex.abs t).prod = 1,
-      { rw multiset.map_congr (eq.refl T) this,
-        have : multiset.card T = ((minpoly ℤ x).nat_degree.choose i),
-        { rw ←nat.choose_symm,
-          convert multiset.card_powerset_len (multiset.card (map (algebra_map ℚ ℂ)
-          (minpoly ℚ x)).roots - i) (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots,
-          { rw h_roots, exact h_degree.symm, },
-          { rw h_roots, exact h_degree.symm, },
-          exact hi, },
-        simp only [this, multiset.map_const, multiset.sum_repeat, nat.smul_one_eq_coe], },
-      { intros s hs,
-        rw ( _ : (multiset.map complex.abs s) = multiset.repeat 1
-          (multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots - i)),
-        simp only [multiset.prod_repeat, one_pow],
-        suffices hz : ∀ z ∈ s, complex.abs z = 1,
-        { rw ( _ : multiset.map complex.abs s = multiset.map (function.const ℂ 1) s),
-          { rw multiset.mem_powerset_len at hs,
-            simp only [hs.right, multiset.map_const], },
-          exact multiset.map_congr (eq.refl s) hz },
-        { intros z hz,
-          suffices : z ∈ (minpoly ℚ x).root_set ℂ,
-          {
-            rw [← number_field.embeddings.eq_roots x] at this,
-            rcases set.mem_range.mp this with ⟨φ, hφ⟩,
-            rw ←hφ,
-            exact (set.mem_set_of.mp hx) φ,
-            apply_instance },
-          apply multiset.mem_to_finset.mpr,
-          refine multiset.mem_of_le _ hz,
-          exact (multiset.mem_powerset_len.mp hs).left, }}},
-    suffices : complex.abs (multiset.map multiset.prod T).sum ≤
-        (multiset.map complex.abs (multiset.map multiset.prod T)).sum,
-    { apply le_trans this,
-      apply le_of_eq,
-      suffices :  ∀ t ∈ T, complex.abs (multiset.prod t) = (multiset.map complex.abs t).prod,
-      { simp only [multiset.map_congr (eq.refl T) this, multiset.map_map], },
-      intros t ht,
-      exact (multiset.prod_hom t complex.abs_hom).symm, },
-      refine multiset.le_sum_of_subadditive complex.abs _ _ (multiset.map multiset.prod T),
-      exact complex.abs_zero,
-      exact (λ a b, complex.abs_add a b), },
-  { push_neg at hi,
-    rw nat.choose_eq_zero_of_lt hi,
-    rw coeff_eq_zero_of_nat_degree_lt,
-    norm_cast,
-    exact hi, },
-  },
 end
 
 /-- TODO. Golf this -/
