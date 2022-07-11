@@ -31,27 +31,16 @@ section forward
 open_locale nnreal
 
 -- TODO maybe gen to is_R_or_C?
+
 variables {K : Type*} [monoid K] {n : ℕ} (x : K) (hx : x ^ n = 1) (hn : 0 < n)
 variables (φ : K →* ℂ)
 include hx hn
 open complex
 
--- The clean way to do this is to show that abs of phi is a monoid hom to ℝ≥0, and monoid homs take
--- roots of unity to roots of unity, and that roots of unity ℝ≥0 is trivial
 lemma absolute_value_one : abs (φ x) = 1 :=
 begin
-  have h_pow : (abs (φ x)) ^ n = 1,
-  { rw (_ : abs (φ x) ^ n = abs (φ x ^ n)),
-    rw (_ : φ x ^ n = φ (x ^ n)),
-    simp only [hx, complex.abs_one, monoid_hom.map_one],
-    rw monoid_hom.map_pow,
-    rw is_absolute_value.abv_pow complex.abs, },
-  set t := abs (φ x),
-  have : 0 ≤ t, from (φ x).abs_nonneg,
-  clear_value t,
-  lift t to ℝ≥0 using this,
-  norm_cast at *,
-  rwa (@pow_eq_one_iff _ _ _ nnreal.covariant_mul _ _ hn.ne') at h_pow,
+  have h_pow : (φ x)^n = 1, by simp [←monoid_hom.map_pow, hx, monoid_hom.map_one],
+  exact norm_eq_one_of_pow_eq_one h_pow (ne_of_gt hn),
 end
 
 end forward
