@@ -1,0 +1,221 @@
+/-
+Copyright (c) 2022 Alex J. Best, X.-F. Roblot. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors:  Alex J. Best, X-F. Roblot
+-/
+
+import number_theory.number_field
+import analysis.complex.polynomial
+
+section admit
+namespace multiset
+
+variables {R : Type*} [comm_ring R]
+
+/-- import from PR15008 -/
+def esymm (s : multiset R) (n : ℕ) : R := ((s.powerset_len n).map multiset.prod).sum
+
+/-- import from PR15008 -/
+lemma prod_X_sub_C_coeff (s : multiset R) {k : ℕ} (h : k ≤ s.card):
+    polynomial.coeff (s.map (λ r, polynomial.X - polynomial.C r)).prod k =
+    (-1)^k * s.esymm (s.card - k) :=
+begin
+  sorry,
+end
+
+end multiset
+end admit
+
+section forward
+
+open_locale nnreal
+
+-- TODO maybe gen to is_R_or_C?
+
+variables {K : Type*} [monoid K] {n : ℕ} (x : K) (hx : x ^ n = 1) (hn : 0 < n)
+variables (φ : K →* ℂ)
+include hx hn
+open complex
+
+lemma absolute_value_one : abs (φ x) = 1 :=
+begin
+  have h_pow : (φ x)^n = 1, by simp [←monoid_hom.map_pow, hx, monoid_hom.map_one],
+  exact norm_eq_one_of_pow_eq_one h_pow (ne_of_gt hn),
+end
+
+end forward
+
+section backwards
+
+open set finite_dimensional complex
+open_locale classical
+open_locale big_operators
+open_locale polynomial
+
+
+variables {K : Type*} [field K] [number_field K] {n : ℕ} (x : K)
+open polynomial
+
+noncomputable theory
+
+/-- TODO. Golf this -/
+lemma nat_degree_le_finrank {K : Type*} [field K] [number_field K] {x : K} (hx : is_integral ℤ x) :
+  (minpoly ℤ x).nat_degree ≤ finrank ℚ K :=
+begin
+  rw (_ : (minpoly ℤ x).nat_degree = (minpoly ℚ x).nat_degree),
+  rw [← intermediate_field.adjoin.finrank (is_separable.is_integral ℚ x),
+    ← intermediate_field.finrank_eq_finrank_subalgebra],
+  convert submodule.finrank_le (ℚ⟮x⟯.to_subalgebra.to_submodule : submodule _ _),
+  have : minpoly ℚ x = (minpoly ℤ x).map (algebra_map ℤ ℚ),
+  from minpoly.gcd_domain_eq_field_fractions' ℚ hx,
+  rw [this, nat_degree_map_eq_of_injective _],
+  exact is_fraction_ring.injective ℤ ℚ,
+end
+
+-- local attribute [-instance] algebra_rat
+local attribute [-instance] complex.algebra
+
+/- TODO. generalize to |roots| ≤ bound C -/
+lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
+  (hxi : is_integral ℤ x) (i : ℕ) :
+  |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
+begin
+  have hmp : minpoly ℚ x = map (algebra_map ℤ ℚ) (minpoly ℤ x),
+    from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
+  have hdg : (minpoly ℚ x).nat_degree = (minpoly ℤ x).nat_degree,
+  { rw hmp, convert nat_degree_map_eq_of_injective _ _,
+    exact (algebra_map ℤ ℚ).injective_int, },
+  have hsp : splits (algebra_map ℚ ℂ) (minpoly ℚ x) :=
+    is_alg_closed.splits_codomain (minpoly ℚ x),
+  have hcd :  multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree,
+  { exact (nat_degree_eq_card_roots hsp).symm, },
+  by_cases hi : i ≤ (minpoly ℤ x).nat_degree,
+  { suffices : complex.abs ((map (algebra_map ℚ ℂ) (minpoly ℚ x)).coeff i) ≤
+          (minpoly ℤ x).nat_degree.choose i,
+    -- TODO: still don't like this proof
+    { suffices : (|(minpoly ℤ x).coeff i| : ℝ) ≤ ↑((minpoly ℤ x).nat_degree.choose i),
+      { exact_mod_cast this, },
+      convert this,
+      rw hmp,
+      simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
+      norm_cast, },
+    rw eq_prod_roots_of_splits hsp,
+    rw monic.def.mp (minpoly.monic (is_separable.is_integral ℚ x)),
+    rw [ring_hom.map_one, map_one, one_mul, multiset.prod_X_sub_C_coeff],
+    swap, rwa [hcd, hdg],
+    rw ( _ : multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree),
+    swap, { exact_mod_cast (nat_degree_eq_card_roots hsp).symm },
+    rw [complex.abs_mul, (by norm_num : abs ((-1 : ℂ) ^ i) =  1), one_mul],
+    apply le_trans (multiset.le_sum_of_subadditive complex.abs _ _ _ ),
+    rotate, exact abs_zero, exact abs_add,
+    rw multiset.map_map,
+    suffices : ∀ (t : multiset ℂ), t ∈ multiset.powerset_len ((minpoly ℚ x).nat_degree - i)
+      (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots → complex.abs t.prod = 1,
+    { rw multiset.map_congr (eq.refl _) this,
+      rw [multiset.map_const, multiset.sum_repeat, multiset.card_powerset_len,
+        nat.smul_one_eq_coe, hcd],
+      apply eq.le,
+      repeat { rw hdg },
+      exact_mod_cast nat.choose_symm hi, },
+    intros t ht,
+    rw ←complex.abs_hom_apply,
+    rw (multiset.prod_hom t complex.abs_hom).symm,
+    suffices : ∀ (z : ℂ), z ∈ t → abs_hom z = 1,
+    { rw multiset.map_congr (eq.refl _) this,
+      simp only [multiset.map_const, multiset.prod_repeat, one_pow], },
+    intros z hz,
+    suffices : ∃ (φ : K →+* ℂ), φ x = z,
+    { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact hx φ, },
+    rw [←set.mem_range, number_field.embeddings.eq_roots, mem_root_set_iff _, aeval_def],
+    have : _, from multiset.mem_of_le (multiset.mem_powerset_len.mp ht).left hz,
+    rw mem_roots_map at this, { exact_mod_cast this, },
+    repeat { rw hmp, refine monic.ne_zero _,
+      exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
+    apply_instance, },
+  { push_neg at hi,
+    rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt],
+    { norm_cast, },
+    { exact hi, }}
+end
+
+/-- TODO. Golf this -/
+lemma finite_all_abs_eq_one : {x : K | is_integral ℤ x ∧ ∀ φ : K →+* ℂ, abs (φ x) = 1}.finite :=
+begin
+  suffices :
+    (⋃ (f : polynomial ℤ)
+       (hf : f.nat_degree ≤ finrank ℚ K ∧ ∀ i, |f.coeff i| ≤ f.nat_degree.choose i),
+       ((f.map (algebra_map ℤ K)).roots.to_finset : set K)).finite,
+  { refine this.subset _,
+    intros x hx,
+    rw mem_Union,
+    use minpoly ℤ x,
+    simp only [exists_prop, mem_Union, multiset.mem_to_finset, finset.mem_coe],
+    refine ⟨⟨_, _⟩, _⟩,
+    { exact nat_degree_le_finrank hx.1, },
+    { exact minpoly_coeff_le_of_all_abs_eq_one x hx.2 hx.1, },
+    rw [mem_roots, is_root.def, ←polynomial.eval₂_eq_eval_map,
+      ←aeval_def],
+    exact minpoly.aeval ℤ x,
+    suffices : (minpoly ℤ x) ≠ 0,
+    { contrapose! this,
+      simp only [polynomial.ext_iff, coeff_map, coeff_zero] at this ⊢,
+      suffices inj : function.injective (algebra_map ℤ K),
+      { exact λ n : ℕ, inj (by rw [(this n), (algebra_map ℤ K).map_zero]),},
+      exact int.cast_injective, },
+    refine minpoly.ne_zero hx.1, },
+  refine finite.bUnion _ _,
+  { have : inj_on (λ g : polynomial ℤ, λ d : fin (finrank ℚ K + 1), g.coeff d)
+      { f | f.nat_degree ≤ finrank ℚ K
+            ∧ ∀ (i : ℕ), |f.coeff i| ≤ f.nat_degree.choose i },
+    { intros x hx y hy he,
+      ext,
+      by_cases n < finrank ℚ K + 1,
+      { simpa using congr_fun he ⟨n, h⟩, },
+      rw [coeff_eq_zero_of_nat_degree_lt, coeff_eq_zero_of_nat_degree_lt],
+      { rcases hy with ⟨hy_left, hy_right⟩,
+        linarith, },
+      { rcases hx with ⟨hx_left, hx_right⟩,
+        linarith, }, },
+    { refine finite.of_finite_image _ this,
+      have : (set.pi univ (λ d : fin (finrank ℚ K + 1), Icc (-(finrank ℚ K).choose d : ℤ)
+              ((finrank ℚ K).choose d))).finite := finite.pi (λ d, finite_Icc _ _),
+      refine finite.subset this _,
+      simp only [pi_univ_Icc, image_subset_iff],
+      intros f hf,
+      simp only [pi_univ_Icc, mem_preimage, mem_Icc, pi.le_def] at *,
+      rw ← forall_and_distrib,
+      intro x,
+      rw mem_def at hf,
+      rcases hf with ⟨hf_left, hf_right⟩,
+      specialize hf_right x,
+      rw abs_le at hf_right,
+      suffices : f.nat_degree.choose x ≤ (finrank ℚ K).choose x,
+      { split; linarith, },
+      apply nat.choose_mono _ hf_left, }, },
+  { intros p hp,
+    -- few possibilites here
+    exact polynomial.root_set_finite p K, },
+end
+
+/-- TODO. Golf this -/
+-- TODO we don't really need K to be a number field here, more general field extensions are fine
+-- as long as we keep the condition that x is integral over ℤ
+variables (hx : ∀ φ : K →+* ℂ, abs (φ x) = 1) (hxi : is_integral ℤ x)
+include hx hxi
+/-- Lemma 1.6 of Washington's Introduction to cyclotomic fields -/
+lemma mem_roots_of_unity_of_abs_eq_one : ∃ (n : ℕ) (hn : 0 < n), x ^ n = 1 :=
+begin
+  obtain ⟨a, -, b, -, habne, h⟩ := @infinite.exists_ne_map_eq_of_maps_to _ _ _ _
+      ((^) x : ℕ → K) infinite_univ _ (finite_all_abs_eq_one),
+  { replace habne := habne.lt_or_lt,
+    wlog : a < b := habne using [a b],
+    refine ⟨b - a, tsub_pos_of_lt habne, _⟩,
+    have hxne : x ≠ 0,
+    { contrapose! hx,
+      simp only [hx, complex.abs_zero, ring_hom.map_zero, ne.def, not_false_iff, zero_ne_one],
+      use (is_alg_closed.lift (number_field.is_algebraic K)).to_ring_hom },
+    rw [pow_sub₀ _ hxne habne.le, h, mul_inv_cancel (pow_ne_zero b hxne)] },
+  { rw [set.maps_univ_to],
+    exact λ a, ⟨hxi.pow a, λ φ, by simp [hx φ, is_absolute_value.abv_pow complex.abs]⟩ },
+end
+end backwards
