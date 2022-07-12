@@ -27,22 +27,19 @@ end multiset
 
 namespace polynomial
 
+variables {F K : Type*} [field F] [nontrivial K] [normed_field K]
+
 open_locale polynomial
 open_locale nnreal
 
-variables {K : Type*} [normed_field K]
-
-lemma coeff_le_of_roots_le {p : K[X]} {B : ℝ} (i : ℕ)
-  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits (ring_hom.id K) p) (h3 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
-  ∥ p.coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
+lemma coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ)
+  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits f p) (h3 : ∀ z ∈ (map f p).roots, ∥z∥ ≤ B) :
+  ∥ (map f p).coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
 begin
-  have hcd :  multiset.card p.roots = p.nat_degree,
-  { nth_rewrite 0 ←@map_id K _ p,
-    exact (nat_degree_eq_card_roots h2).symm, },
+  have hcd :  multiset.card (map f p).roots = p.nat_degree := (nat_degree_eq_card_roots h2).symm,
   by_cases hi : i ≤ p.nat_degree,
-  { nth_rewrite 0 ←@map_id K _ p,
-    rw eq_prod_roots_of_splits h2,
-    rw [map_id, ring_hom.id_apply, monic.def.mp h0, ring_hom.map_one, one_mul],
+  { rw eq_prod_roots_of_splits h2,
+    rw [monic.def.mp h0, ring_hom.map_one, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
     rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
@@ -50,7 +47,8 @@ begin
     rotate, exact norm_zero, exact norm_add_le,
     rw multiset.map_map,
     suffices : ∀ r ∈ multiset.map (norm_hom ∘ multiset.prod)
-      (multiset.powerset_len (multiset.card p.roots - i) p.roots), r ≤ B^(p.nat_degree - i),
+      (multiset.powerset_len (multiset.card (map f p).roots - i) (map f p).roots),
+      r ≤ B^(p.nat_degree - i),
     { convert multiset.sum_le_sum_sum _ this,
       simp only [hi, hcd, multiset.map_const, multiset.card_map, multiset.card_powerset_len,
         nat.choose_symm, multiset.sum_repeat, nsmul_eq_mul, mul_comm], },
@@ -84,7 +82,8 @@ begin
   { push_neg at hi,
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
     rw_mod_cast mul_zero,
-    { exact hi, }},
+    { rwa monic.nat_degree_map h0,
+      apply_instance, }},
 end
 
 end polynomial
@@ -114,14 +113,14 @@ open_locale classical
 open_locale big_operators
 open_locale polynomial
 
-
 variables {K : Type*} [field K] [number_field K] {n : ℕ} (x : K)
 open polynomial
 
 noncomputable theory
 
 /-- TODO. Golf this -/
-lemma nat_degree_le_finrank {K : Type*} [field K] [number_field K] {x : K} (hx : is_integral ℤ x) :
+lemma nat_degree_le_finrank {K : Type*} [field K] [number_field K] {x : K}
+  (hxi : is_integral ℤ x) :
   (minpoly ℤ x).nat_degree ≤ finrank ℚ K :=
 begin
   rw (_ : (minpoly ℤ x).nat_degree = (minpoly ℚ x).nat_degree),
@@ -129,12 +128,11 @@ begin
     ← intermediate_field.finrank_eq_finrank_subalgebra],
   convert submodule.finrank_le (ℚ⟮x⟯.to_subalgebra.to_submodule : submodule _ _),
   have : minpoly ℚ x = (minpoly ℤ x).map (algebra_map ℤ ℚ),
-  from minpoly.gcd_domain_eq_field_fractions' ℚ hx,
+  from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
   rw [this, nat_degree_map_eq_of_injective _],
   exact is_fraction_ring.injective ℤ ℚ,
 end
 
--- local attribute [-instance] algebra_rat
 local attribute [-instance] complex.algebra
 
 lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
@@ -157,61 +155,18 @@ begin
     simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
     norm_cast, },
   suffices : ∀ z ∈ (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots, abs z ≤ 1,
-  { refine coeff_le_of_roots_le i _ _ hsp this,
-
-  },
-
-  sorry ; {
-  have hcd :  multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree,
-  { exact (nat_degree_eq_card_roots hsp).symm, },
-  by_cases hi : i ≤ (minpoly ℤ x).nat_degree,
-  { suffices : complex.abs ((map (algebra_map ℚ ℂ) (minpoly ℚ x)).coeff i) ≤
-          (minpoly ℤ x).nat_degree.choose i,
-    -- TODO: still don't like this proof
-    { suffices : (|(minpoly ℤ x).coeff i| : ℝ) ≤ ↑((minpoly ℤ x).nat_degree.choose i),
-      { exact_mod_cast this, },
-      convert this,
-      rw hmp,
-      simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
-      norm_cast, },
-    rw eq_prod_roots_of_splits hsp,
-    rw monic.def.mp (minpoly.monic (is_separable.is_integral ℚ x)),
-    rw [ring_hom.map_one, map_one, one_mul, multiset.prod_X_sub_C_coeff],
-    swap, rwa [hcd, hdg],
-    rw ( _ : multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree),
-    swap, { exact_mod_cast (nat_degree_eq_card_roots hsp).symm },
-    rw [complex.abs_mul, (by norm_num : abs ((-1 : ℂ) ^ i) =  1), one_mul],
-    apply le_trans (multiset.le_sum_of_subadditive complex.abs _ _ _ ),
-    rotate, exact abs_zero, exact abs_add,
-    rw multiset.map_map,
-    suffices : ∀ (t : multiset ℂ), t ∈ multiset.powerset_len ((minpoly ℚ x).nat_degree - i)
-      (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots → complex.abs t.prod = 1,
-    { rw multiset.map_congr (eq.refl _) this,
-      rw [multiset.map_const, multiset.sum_repeat, multiset.card_powerset_len,
-        nat.smul_one_eq_coe, hcd],
-      apply eq.le,
-      repeat { rw hdg },
-      exact_mod_cast nat.choose_symm hi, },
-    intros t ht,
-    rw ←complex.abs_hom_apply,
-    rw (multiset.prod_hom t complex.abs_hom).symm,
-    suffices : ∀ (z : ℂ), z ∈ t → abs_hom z = 1,
-    { rw multiset.map_congr (eq.refl _) this,
-      simp only [multiset.map_const, multiset.prod_repeat, one_pow], },
-    intros z hz,
-    suffices : ∃ (φ : K →+* ℂ), φ x = z,
-    { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact hx φ, },
-    rw [←set.mem_range, number_field.embeddings.eq_roots, mem_root_set_iff _, aeval_def],
-    have : _, from multiset.mem_of_le (multiset.mem_powerset_len.mp ht).left hz,
-    rw mem_roots_map at this, { exact_mod_cast this, },
-    repeat { rw hmp, refine monic.ne_zero _,
-      exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
-    apply_instance, },
-  { push_neg at hi,
-    rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt],
-    { norm_cast, },
-    { exact hi, }}
-  }
+  { convert coeff_le_of_roots_le i _ _ hsp this,
+    { simp only [hdg, one_pow, one_mul], },
+    { rw hmp, exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
+    { linarith, }},
+  intros z hz,
+  suffices : ∃ (φ : K →+* ℂ), φ x = z,
+  { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact le_of_eq (hx φ), },
+  rw [←set.mem_range, number_field.embeddings.eq_roots, mem_root_set_iff _, aeval_def],
+  rwa mem_roots_map at hz,
+  repeat { rw hmp, refine monic.ne_zero _,
+    exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
+  apply_instance,
 end
 
 /-- TODO. Golf this -/
@@ -225,20 +180,15 @@ begin
     intros x hx,
     rw mem_Union,
     use minpoly ℤ x,
+    -- TODO. remove this simp
     simp only [exists_prop, mem_Union, multiset.mem_to_finset, finset.mem_coe],
     refine ⟨⟨_, _⟩, _⟩,
     { exact nat_degree_le_finrank hx.1, },
     { exact minpoly_coeff_le_of_all_abs_eq_one x hx.2 hx.1, },
-    rw [mem_roots, is_root.def, ←polynomial.eval₂_eq_eval_map,
-      ←aeval_def],
+    rw [mem_roots, is_root.def, ←polynomial.eval₂_eq_eval_map, ←aeval_def],
     exact minpoly.aeval ℤ x,
-    suffices : (minpoly ℤ x) ≠ 0,
-    { contrapose! this,
-      simp only [polynomial.ext_iff, coeff_map, coeff_zero] at this ⊢,
-      suffices inj : function.injective (algebra_map ℤ K),
-      { exact λ n : ℕ, inj (by rw [(this n), (algebra_map ℤ K).map_zero]),},
-      exact int.cast_injective, },
-    refine minpoly.ne_zero hx.1, },
+    refine monic.ne_zero _,
+    exact monic.map (algebra_map ℤ K) (minpoly.monic hx.left), },
   refine finite.bUnion _ _,
   { have : inj_on (λ g : polynomial ℤ, λ d : fin (finrank ℚ K + 1), g.coeff d)
       { f | f.nat_degree ≤ finrank ℚ K
