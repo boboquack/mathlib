@@ -36,21 +36,18 @@ end admit
 open_locale polynomial
 open_locale nnreal
 
-variables {K : Type*} [normed_field K]
+variables {F K : Type*} [field F] [nontrivial K] [normed_field K]
 
 namespace polynomial
 
-lemma coeff_le_of_roots_le {p : K[X]} {B : ℝ} (i : ℕ)
-  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits (ring_hom.id K) p) (h3 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
-  ∥ p.coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
+lemma coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ)
+  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits f p) (h3 : ∀ z ∈ (map f p).roots, ∥z∥ ≤ B) :
+  ∥ (map f p).coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
 begin
-  have hcd :  multiset.card p.roots = p.nat_degree,
-  { nth_rewrite 0 ←@map_id K _ p,
-    exact (nat_degree_eq_card_roots h2).symm, },
+  have hcd :  multiset.card (map f p).roots = p.nat_degree := (nat_degree_eq_card_roots h2).symm,
   by_cases hi : i ≤ p.nat_degree,
-  { nth_rewrite 0 ←@map_id K _ p,
-    rw eq_prod_roots_of_splits h2,
-    rw [map_id, ring_hom.id_apply, monic.def.mp h0, ring_hom.map_one, one_mul],
+  { rw eq_prod_roots_of_splits h2,
+    rw [monic.def.mp h0, ring_hom.map_one, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
     rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
@@ -58,7 +55,8 @@ begin
     rotate, exact norm_zero, exact norm_add_le,
     rw multiset.map_map,
     suffices : ∀ r ∈ multiset.map (norm_hom ∘ multiset.prod)
-      (multiset.powerset_len (multiset.card p.roots - i) p.roots), r ≤ B^(p.nat_degree - i),
+      (multiset.powerset_len (multiset.card (map f p).roots - i) (map f p).roots),
+      r ≤ B^(p.nat_degree - i),
     { convert multiset.sum_le_sum_sum _ this,
       simp only [hi, hcd, multiset.map_const, multiset.card_map, multiset.card_powerset_len,
         nat.choose_symm, multiset.sum_repeat, nsmul_eq_mul, mul_comm], },
@@ -92,7 +90,8 @@ begin
   { push_neg at hi,
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
     rw_mod_cast mul_zero,
-    { exact hi, }},
+    { rwa monic.nat_degree_map h0,
+      apply_instance, }},
 end
 
 end polynomial
