@@ -24,17 +24,79 @@ begin
 end
 
 end multiset
+
+namespace polynomial
+
+open_locale polynomial
+open_locale nnreal
+
+variables {K : Type*} [normed_field K]
+
+lemma coeff_le_of_roots_le {p : K[X]} {B : ℝ} (i : ℕ)
+  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits (ring_hom.id K) p) (h3 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
+  ∥ p.coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
+begin
+  have hcd :  multiset.card p.roots = p.nat_degree,
+  { nth_rewrite 0 ←@map_id K _ p,
+    exact (nat_degree_eq_card_roots h2).symm, },
+  by_cases hi : i ≤ p.nat_degree,
+  { nth_rewrite 0 ←@map_id K _ p,
+    rw eq_prod_roots_of_splits h2,
+    rw [map_id, ring_hom.id_apply, monic.def.mp h0, ring_hom.map_one, one_mul],
+    rw multiset.prod_X_sub_C_coeff,
+    swap, rwa hcd,
+    rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
+    apply le_trans (multiset.le_sum_of_subadditive norm _ _ _ ),
+    rotate, exact norm_zero, exact norm_add_le,
+    rw multiset.map_map,
+    suffices : ∀ r ∈ multiset.map (norm_hom ∘ multiset.prod)
+      (multiset.powerset_len (multiset.card p.roots - i) p.roots), r ≤ B^(p.nat_degree - i),
+    { convert multiset.sum_le_sum_sum _ this,
+      simp only [hi, hcd, multiset.map_const, multiset.card_map, multiset.card_powerset_len,
+        nat.choose_symm, multiset.sum_repeat, nsmul_eq_mul, mul_comm], },
+    intros r hr,
+    obtain ⟨t, ht⟩ := multiset.mem_map.mp hr,
+    lift B to ℝ≥0 using h1,
+    lift (multiset.map norm_hom t) to (multiset ℝ≥0) with normt,
+    swap, { intros x hx,
+      obtain ⟨z, hz⟩ := multiset.mem_map.mp hx,
+      rw ←hz.right,
+      exact norm_nonneg z, },
+    suffices : ∀ r ∈ normt, r ≤ B,
+    { convert multiset.prod_le_sum_prod _ this using 1,
+      { rw_mod_cast [←ht.right, function.comp_apply, ←multiset.prod_hom t norm_hom, ←h], },
+      { rw [multiset.map_const, multiset.prod_repeat, nnreal.coe_pow],
+        congr,
+        have card_eq : _, from congr_arg (λ (t : multiset ℝ), t.card) h,
+        rw [multiset.card_map, multiset.card_map] at card_eq,
+        rw [card_eq, ←hcd],
+        exact (multiset.mem_powerset_len.mp ht.left).right.symm, }},
+    intros r hr,
+    suffices : ∃ z ∈ t, norm z = r,
+    { obtain ⟨z, hzt, hzr⟩ := this,
+      have zleB : ∥z∥ ≤ B,
+      { exact h3 z (multiset.mem_of_le (multiset.mem_powerset_len.mp ht.left).left hzt) },
+      rwa hzr at zleB, },
+    have rmem : (r : ℝ) ∈ multiset.map coe normt, from multiset.mem_map_of_mem _ hr,
+    rw h at rmem,
+    obtain ⟨z, hz⟩ := multiset.mem_map.mp rmem,
+    use z, exact hz, },
+  { push_neg at hi,
+    rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
+    rw_mod_cast mul_zero,
+    { exact hi, }},
+end
+
+end polynomial
+
 end admit
 
 section forward
 
-open_locale nnreal
-
--- TODO maybe gen to is_R_or_C?
-
 variables {K : Type*} [monoid K] {n : ℕ} (x : K) (hx : x ^ n = 1) (hn : 0 < n)
 variables (φ : K →* ℂ)
 include hx hn
+
 open complex
 
 lemma absolute_value_one : abs (φ x) = 1 :=
@@ -75,7 +137,6 @@ end
 -- local attribute [-instance] algebra_rat
 local attribute [-instance] complex.algebra
 
-/- TODO. generalize to |roots| ≤ bound C -/
 lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
   (hxi : is_integral ℤ x) (i : ℕ) :
   |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
@@ -87,6 +148,20 @@ begin
     exact (algebra_map ℤ ℚ).injective_int, },
   have hsp : splits (algebra_map ℚ ℂ) (minpoly ℚ x) :=
     is_alg_closed.splits_codomain (minpoly ℚ x),
+  suffices : complex.abs ((map (algebra_map ℚ ℂ) (minpoly ℚ x)).coeff i) ≤
+          (minpoly ℤ x).nat_degree.choose i,
+  { suffices : (|(minpoly ℤ x).coeff i| : ℝ) ≤ ↑((minpoly ℤ x).nat_degree.choose i),
+    { exact_mod_cast this, },
+    convert this,
+    rw hmp,
+    simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
+    norm_cast, },
+  suffices : ∀ z ∈ (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots, abs z ≤ 1,
+  { refine coeff_le_of_roots_le i _ _ hsp this,
+
+  },
+
+  sorry ; {
   have hcd :  multiset.card (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots = (minpoly ℚ x).nat_degree,
   { exact (nat_degree_eq_card_roots hsp).symm, },
   by_cases hi : i ≤ (minpoly ℤ x).nat_degree,
@@ -136,6 +211,7 @@ begin
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt],
     { norm_cast, },
     { exact hi, }}
+  }
 end
 
 /-- TODO. Golf this -/
