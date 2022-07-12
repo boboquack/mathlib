@@ -26,85 +26,68 @@ end
 end multiset
 end admit
 
-open_locale classical
 open_locale polynomial
 open_locale nnreal
 
-variables {K : Type*} [normed_field K] [is_alg_closed K] [char_zero K]
+variables {K : Type*} [normed_field K] [is_alg_closed K]
 
-open polynomial
+namespace polynomial
 
-noncomputable theory
-
-lemma bounded_coeffs_of_bounded_roots {p : K[X]} {B : ℝ} (i : ℕ)
+lemma coeff_le_of_roots_le {p : K[X]} {B : ℝ} (i : ℕ)
   (h0 : p.monic) (h1 : 0 ≤ B) (h2 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
   ∥ p.coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
 begin
   have hsp : splits (ring_hom.id K) p := is_alg_closed.splits_codomain p,
   have hcd :  multiset.card p.roots = p.nat_degree,
-  { nth_rewrite 0 ←@polynomial.map_id K _ p,
+  { nth_rewrite 0 ←@map_id K _ p,
     exact (nat_degree_eq_card_roots hsp).symm, },
   by_cases hi : i ≤ p.nat_degree,
   { have hsp : splits (ring_hom.id K) p := is_alg_closed.splits_codomain p,
-    nth_rewrite 0 ←@polynomial.map_id K _ p,
+    nth_rewrite 0 ←@map_id K _ p,
     rw eq_prod_roots_of_splits hsp,
-    rw polynomial.map_id,
-    rw ring_hom.id_apply,
-    rw monic.def.mp h0,
-    rw ring_hom.map_one,
-    rw one_mul,
+    rw [map_id, ring_hom.id_apply, monic.def.mp h0, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
-    rw norm_mul,
-    rw (by norm_num : ∥(-1 : K) ^ i∥=  1),
-    rw one_mul,
+    rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
     apply le_trans (multiset.le_sum_of_subadditive norm _ _ _ ),
     rotate, exact norm_zero, exact norm_add_le,
     rw multiset.map_map,
-    suffices : ∀ r ∈ multiset.map (norm ∘ multiset.prod)
+    suffices : ∀ r ∈ multiset.map (norm_hom ∘ multiset.prod)
       (multiset.powerset_len (multiset.card p.roots - i) p.roots), r ≤ B^(p.nat_degree - i),
     { convert multiset.sum_le_sum_sum _ this,
       simp only [hi, hcd, multiset.map_const, multiset.card_map, multiset.card_powerset_len,
         nat.choose_symm, multiset.sum_repeat, nsmul_eq_mul, mul_comm], },
     intros r hr,
     obtain ⟨t, ht⟩ := multiset.mem_map.mp hr,
-    rw ←ht.right,
     lift B to ℝ≥0 using h1,
-    lift (multiset.map norm_hom t) to (multiset ℝ≥0) with t₀,
-    swap,
-    { intros x hx,
+    lift (multiset.map norm_hom t) to (multiset ℝ≥0) with normt,
+    swap, { intros x hx,
       obtain ⟨z, hz⟩ := multiset.mem_map.mp hx,
       rw ←hz.right,
       exact norm_nonneg z, },
-    have a1 : ∀ r ∈ t₀, r ≤ B,
-    { intros r hr,
-      have : (r : ℝ) ∈ multiset.map coe t₀, from multiset.mem_map_of_mem _ hr,
-      rw h at this,
-      obtain ⟨z, hz⟩ := multiset.mem_map.mp this,
-
-      have : _, from multiset.mem_of_le (multiset.mem_powerset_len.mp ht.left).left hz.left,
-
-      have : norm z ≤ B, from h2 z this,
-      simp [*, nnreal.coe_le_coe] at *,
-    },
-
-    convert multiset.prod_le_sum_prod _ a1 using 1,
-    { have : _, from congr_arg (λ (t : multiset ℝ), t.prod) h,
-      rw multiset.prod_hom t norm_hom at this,
-      convert this.symm using 1,
-      norm_cast, },
-    { simp only [multiset.map_const, multiset.prod_repeat, nnreal.coe_pow, multiset.mem_powerset_len, function.comp_app,
-  multiset.mem_map],
-      congr,
-      have : _, from congr_arg (λ (t : multiset ℝ), t.card) h,
-      rw multiset.card_map at this,
-      rw multiset.card_map at this,
-      rw this,
-      rw ←hcd,
-      have : _, from multiset.mem_powerset_len.mp ht.left,
-      exact this.right.symm, }},
+    suffices : ∀ r ∈ normt, r ≤ B,
+    { convert multiset.prod_le_sum_prod _ this using 1,
+      { rw_mod_cast [←ht.right, function.comp_apply, ←multiset.prod_hom t norm_hom, ←h], },
+      { rw [multiset.map_const, multiset.prod_repeat, nnreal.coe_pow],
+        congr,
+        have card_eq : _, from congr_arg (λ (t : multiset ℝ), t.card) h,
+        rw [multiset.card_map, multiset.card_map] at card_eq,
+        rw [card_eq, ←hcd],
+        exact (multiset.mem_powerset_len.mp ht.left).right.symm, }},
+    intros r hr,
+    suffices : ∃ z ∈ t, norm z = r,
+    { obtain ⟨z, hzt, hzr⟩ := this,
+      have zleB : ∥z∥ ≤ B,
+      { exact h2 z (multiset.mem_of_le (multiset.mem_powerset_len.mp ht.left).left hzt) },
+      rwa hzr at zleB, },
+    have rmem : (r : ℝ) ∈ multiset.map coe normt, from multiset.mem_map_of_mem _ hr,
+    rw h at rmem,
+    obtain ⟨z, hz⟩ := multiset.mem_map.mp rmem,
+    use z, exact hz, },
   { push_neg at hi,
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
     rw_mod_cast mul_zero,
     { exact hi, }},
 end
+
+end polynomial
