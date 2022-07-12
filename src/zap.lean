@@ -5,7 +5,14 @@ Authors: X-F. Roblot
 -/
 
 import analysis.normed.field.basic
-import field_theory.is_alg_closed.basic
+import field_theory.splitting_field
+
+/-!
+# Roots and coeffs
+
+This is a temporary file containing the proof that, if the roots of a polynomials are bounded,
+then its coefficients are also bounded. It relies on PR15008.
+-/
 
 section admit
 namespace multiset
@@ -29,22 +36,20 @@ end admit
 open_locale polynomial
 open_locale nnreal
 
-variables {K : Type*} [normed_field K] [is_alg_closed K]
+variables {K : Type*} [normed_field K]
 
 namespace polynomial
 
 lemma coeff_le_of_roots_le {p : K[X]} {B : ℝ} (i : ℕ)
-  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
+  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits (ring_hom.id K) p) (h3 : ∀ z ∈ p.roots, ∥z∥ ≤ B) :
   ∥ p.coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
 begin
-  have hsp : splits (ring_hom.id K) p := is_alg_closed.splits_codomain p,
   have hcd :  multiset.card p.roots = p.nat_degree,
   { nth_rewrite 0 ←@map_id K _ p,
-    exact (nat_degree_eq_card_roots hsp).symm, },
+    exact (nat_degree_eq_card_roots h2).symm, },
   by_cases hi : i ≤ p.nat_degree,
-  { have hsp : splits (ring_hom.id K) p := is_alg_closed.splits_codomain p,
-    nth_rewrite 0 ←@map_id K _ p,
-    rw eq_prod_roots_of_splits hsp,
+  { nth_rewrite 0 ←@map_id K _ p,
+    rw eq_prod_roots_of_splits h2,
     rw [map_id, ring_hom.id_apply, monic.def.mp h0, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
@@ -78,7 +83,7 @@ begin
     suffices : ∃ z ∈ t, norm z = r,
     { obtain ⟨z, hzt, hzr⟩ := this,
       have zleB : ∥z∥ ≤ B,
-      { exact h2 z (multiset.mem_of_le (multiset.mem_powerset_len.mp ht.left).left hzt) },
+      { exact h3 z (multiset.mem_of_le (multiset.mem_powerset_len.mp ht.left).left hzt) },
       rwa hzr at zleB, },
     have rmem : (r : ℝ) ∈ multiset.map coe normt, from multiset.mem_map_of_mem _ hr,
     rw h at rmem,
