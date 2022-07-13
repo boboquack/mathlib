@@ -34,10 +34,10 @@ variables [topological_space M]
 continuous_induced_dom
 
 @[continuity, to_additive] lemma continuous_op : continuous (op : M → Mᵐᵒᵖ) :=
-continuous_induced_rng.2 continuous_id
+continuous_induced_rng continuous_id
 
 /-- `mul_opposite.op` as a homeomorphism. -/
-@[to_additive "`add_opposite.op` as a homeomorphism."]
+@[to_additive "`add_opposite.op` as a homeomorphism.", simps]
 def op_homeomorph : M ≃ₜ Mᵐᵒᵖ :=
 { to_equiv := op_equiv,
   continuous_to_fun := continuous_op,
@@ -83,7 +83,8 @@ continuous_induced_dom
 
 @[to_additive] protected lemma continuous_iff {f : X → Mˣ} :
   continuous f ↔ continuous (coe ∘ f : X → M) ∧ continuous (λ x, ↑(f x)⁻¹ : X → M) :=
-by simp only [continuous_induced_rng, embed_product_apply, (∘), continuous_prod_mk, unop_op]
+by simp only [inducing_embed_product.continuous_iff, embed_product_apply, (∘), continuous_prod_mk,
+  op_homeomorph.symm.inducing.continuous_iff, op_homeomorph_symm_apply, unop_op]
 
 @[to_additive] protected lemma continuous_inv : continuous (inv : Mˣ → M) :=
 (units.continuous_iff.1 continuous_id).2

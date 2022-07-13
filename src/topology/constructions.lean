@@ -232,6 +232,10 @@ hf.comp continuous_at_snd
   (hf : continuous f) (hg : continuous g) : continuous (λx, (f x, g x)) :=
 continuous_inf_rng (continuous_induced_rng hf) (continuous_induced_rng hg)
 
+@[simp] lemma continuous_prod_mk {f : α → β} {g : α → γ} :
+  continuous (λ x, (f x, g x)) ↔ continuous f ∧ continuous g :=
+⟨λ h, ⟨h.fst, h.snd⟩, λ h, h.1.prod_mk h.2⟩
+
 @[continuity] lemma continuous.prod.mk (a : α) : continuous (λ b : β, (a, b)) :=
 continuous_const.prod_mk continuous_id'
 
