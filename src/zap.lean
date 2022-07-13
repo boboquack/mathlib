@@ -135,9 +135,10 @@ end
 
 local attribute [-instance] complex.algebra
 
-lemma minpoly_coeff_le_of_all_abs_eq_one (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) = 1})
-  (hxi : is_integral ℤ x) (i : ℕ) :
-  |(minpoly ℤ x).coeff i| ≤ ((minpoly ℤ x).nat_degree.choose i) :=
+lemma minpoly_coeff_le_of_all_abs_le {B : ℝ} (hB : 1 ≤ B)
+  (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) ≤ B}) (hxi : is_integral ℤ x) (i : ℕ) :
+  (|(minpoly ℤ x).coeff i| : ℝ) ≤ B^((minpoly ℤ x).nat_degree - i)
+    * ((minpoly ℤ x).nat_degree.choose i) :=
 begin
   have hmp : minpoly ℚ x = map (algebra_map ℤ ℚ) (minpoly ℤ x),
     from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
@@ -147,21 +148,19 @@ begin
   have hsp : splits (algebra_map ℚ ℂ) (minpoly ℚ x) :=
     is_alg_closed.splits_codomain (minpoly ℚ x),
   suffices : complex.abs ((map (algebra_map ℚ ℂ) (minpoly ℚ x)).coeff i) ≤
-          (minpoly ℤ x).nat_degree.choose i,
-  { suffices : (|(minpoly ℤ x).coeff i| : ℝ) ≤ ↑((minpoly ℤ x).nat_degree.choose i),
-    { exact_mod_cast this, },
-    convert this,
+          B^((minpoly ℤ x).nat_degree - i) * (minpoly ℤ x).nat_degree.choose i,
+  { convert this,
     rw hmp,
     simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
     norm_cast, },
-  suffices : ∀ z ∈ (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots, abs z ≤ 1,
-  { convert coeff_le_of_roots_le i _ _ hsp this,
+  suffices : ∀ z ∈ (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots, abs z ≤ B,
+  { convert coeff_le_of_roots_le i _ _ hsp this using 1,
     { simp only [hdg, one_pow, one_mul], },
     { rw hmp, exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
     { linarith, }},
   intros z hz,
   suffices : ∃ (φ : K →+* ℂ), φ x = z,
-  { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact le_of_eq (hx φ), },
+  { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact (hx φ), },
   rw [←set.mem_range, number_field.embeddings.eq_roots, mem_root_set_iff _, aeval_def],
   rwa mem_roots_map at hz,
   repeat { rw hmp, refine monic.ne_zero _,
@@ -170,21 +169,41 @@ begin
 end
 
 /-- TODO. Golf this -/
-lemma finite_all_abs_eq_one : {x : K | is_integral ℤ x ∧ ∀ φ : K →+* ℂ, abs (φ x) = 1}.finite :=
+lemma finite_all_abs_le {B : ℝ} (hB : 1 ≤ B) :
+  {x : K | is_integral ℤ x ∧ ∀ φ : K →+* ℂ, abs (φ x) ≤ B}.finite :=
 begin
+  set C := nat.ceil (B ^ finrank ℚ K) * (finrank ℚ K).choose ((finrank ℚ K)/2) with Cdef,
   suffices :
     (⋃ (f : polynomial ℤ)
-       (hf : f.nat_degree ≤ finrank ℚ K ∧ ∀ i, |f.coeff i| ≤ f.nat_degree.choose i),
+       (hf : f.nat_degree ≤ finrank ℚ K ∧ ∀ i, |f.coeff i| ≤ C),
        ((f.map (algebra_map ℤ K)).roots.to_finset : set K)).finite,
   { refine this.subset _,
     intros x hx,
     rw mem_Union,
     use minpoly ℤ x,
-    -- TODO. remove this simp
-    simp only [exists_prop, mem_Union, multiset.mem_to_finset, finset.mem_coe],
+    rw [mem_Union, exists_prop, finset.mem_coe, multiset.mem_to_finset],
     refine ⟨⟨_, _⟩, _⟩,
     { exact nat_degree_le_finrank hx.1, },
-    { exact minpoly_coeff_le_of_all_abs_eq_one x hx.2 hx.1, },
+    { intro i,
+      suffices : B ^ ((minpoly ℤ x).nat_degree - i) * ↑((minpoly ℤ x).nat_degree.choose i) ≤ C,
+      { exact_mod_cast le_trans (minpoly_coeff_le_of_all_abs_le x hB hx.right hx.left i) this, },
+      calc
+        B ^ ((minpoly ℤ x).nat_degree - i) * ((minpoly ℤ x).nat_degree.choose i) ≤
+              B ^ (minpoly ℤ x).nat_degree * ((minpoly ℤ x).nat_degree.choose i)
+                : mul_le_mul_of_nonneg_right (pow_le_pow hB (nat.sub_le _ _)) _
+        ... ≤ B ^ (finrank ℚ K) * ((minpoly ℤ x).nat_degree.choose i)
+                : mul_le_mul_of_nonneg_right (pow_le_pow hB _ ) _
+        ... ≤ nat.ceil(B ^ finrank ℚ K) * ((minpoly ℤ x).nat_degree.choose i)
+                : mul_le_mul_of_nonneg_right (nat.le_ceil _ ) _
+        ... ≤ nat.ceil(B ^ finrank ℚ K) * ((finrank ℚ K).choose i)
+                : mul_le_mul_of_nonneg_left _ _
+        ... ≤ nat.ceil(B ^ finrank ℚ K) * (finrank ℚ K).choose ((finrank ℚ K)/2)
+                : mul_le_mul_of_nonneg_left
+                   (nat.cast_le.mpr (nat.choose_le_middle i (finrank ℚ K))) _
+        ... = C : by norm_cast,
+      repeat { exact nat.cast_nonneg _ },
+      swap, exact_mod_cast nat.choose_mono _ _,
+      repeat { exact nat_degree_le_finrank hx.1 }},
     rw [mem_roots, is_root.def, ←polynomial.eval₂_eq_eval_map, ←aeval_def],
     exact minpoly.aeval ℤ x,
     refine monic.ne_zero _,
@@ -192,19 +211,18 @@ begin
   refine finite.bUnion _ _,
   { have : inj_on (λ g : polynomial ℤ, λ d : fin (finrank ℚ K + 1), g.coeff d)
       { f | f.nat_degree ≤ finrank ℚ K
-            ∧ ∀ (i : ℕ), |f.coeff i| ≤ f.nat_degree.choose i },
+            ∧ ∀ (i : ℕ), |f.coeff i| ≤ C},
     { intros x hx y hy he,
       ext,
       by_cases n < finrank ℚ K + 1,
       { simpa using congr_fun he ⟨n, h⟩, },
       rw [coeff_eq_zero_of_nat_degree_lt, coeff_eq_zero_of_nat_degree_lt],
-      { rcases hy with ⟨hy_left, hy_right⟩,
-        linarith, },
-      { rcases hx with ⟨hx_left, hx_right⟩,
-        linarith, }, },
-    { refine finite.of_finite_image _ this,
-      have : (set.pi univ (λ d : fin (finrank ℚ K + 1), Icc (-(finrank ℚ K).choose d : ℤ)
-              ((finrank ℚ K).choose d))).finite := finite.pi (λ d, finite_Icc _ _),
+      { rcases hy with ⟨hy_left, hy_right⟩, linarith, },
+      { rcases hx with ⟨hx_left, hx_right⟩, linarith, }},
+    {
+      refine finite.of_finite_image _ this,
+      have : (set.pi univ (λ d : fin (finrank ℚ K + 1), Icc (- C : ℤ) C )).finite
+        := finite.pi (λ d, finite_Icc _ _),
       refine finite.subset this _,
       simp only [pi_univ_Icc, image_subset_iff],
       intros f hf,
@@ -214,13 +232,8 @@ begin
       rw mem_def at hf,
       rcases hf with ⟨hf_left, hf_right⟩,
       specialize hf_right x,
-      rw abs_le at hf_right,
-      suffices : f.nat_degree.choose x ≤ (finrank ℚ K).choose x,
-      { split; linarith, },
-      apply nat.choose_mono _ hf_left, }, },
-  { intros p hp,
-    -- few possibilites here
-    exact polynomial.root_set_finite p K, },
+      rwa abs_le at hf_right, }},
+  { exact λ p _, polynomial.root_set_finite p K, },
 end
 
 /-- TODO. Golf this -/
