@@ -32,14 +32,17 @@ variables {F K : Type*} [field F] [nontrivial K] [normed_field K]
 open_locale polynomial
 open_locale nnreal
 
+-- TODO. Clean up the proof
 lemma coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ)
-  (h0 : p.monic) (h1 : 0 ≤ B) (h2 : splits f p) (h3 : ∀ z ∈ (map f p).roots, ∥z∥ ≤ B) :
+  (h1 : p.monic) (h2 : splits f p) (h3 : ∀ z ∈ (map f p).roots, ∥z∥ ≤ B) :
   ∥ (map f p).coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
 begin
   have hcd :  multiset.card (map f p).roots = p.nat_degree := (nat_degree_eq_card_roots h2).symm,
+  by_cases hB : 0 ≤ B,
+  {
   by_cases hi : i ≤ p.nat_degree,
   { rw eq_prod_roots_of_splits h2,
-    rw [monic.def.mp h0, ring_hom.map_one, ring_hom.map_one, one_mul],
+    rw [monic.def.mp h1, ring_hom.map_one, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
     rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
@@ -54,7 +57,7 @@ begin
         nat.choose_symm, multiset.sum_repeat, nsmul_eq_mul, mul_comm], },
     intros r hr,
     obtain ⟨t, ht⟩ := multiset.mem_map.mp hr,
-    lift B to ℝ≥0 using h1,
+    lift B to ℝ≥0 using hB,
     lift (multiset.map norm_hom t) to (multiset ℝ≥0) with normt,
     swap, { intros x hx,
       obtain ⟨z, hz⟩ := multiset.mem_map.mp hx,
@@ -82,8 +85,32 @@ begin
   { push_neg at hi,
     rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
     rw_mod_cast mul_zero,
-    { rwa monic.nat_degree_map h0,
-      apply_instance, }},
+    { rwa monic.nat_degree_map h1,
+      apply_instance, }}},
+  { push_neg at hB,
+    have : (map f p).roots = 0,
+    { contrapose! hB,
+      obtain ⟨z, hz⟩ := multiset.exists_mem_of_ne_zero hB,
+      exact le_trans (norm_nonneg z) (h3 z hz), },
+    have hdg : p.nat_degree = 0,
+    { rw this at hcd,
+      rw multiset.card_zero at hcd,
+      exact hcd.symm, },
+    by_cases hi : i = 0,
+    { rw [hdg, hi, (monic.nat_degree_eq_zero_iff_eq_one h1).mp hdg],
+      simp only [polynomial.map_one, coeff_one_zero, norm_one, pow_zero, nat.choose_self,
+        nat.cast_one, mul_one], },
+    { replace hi := zero_lt_iff.mpr hi,
+      rw ←hdg at hi,
+      rw [nat.choose_eq_zero_of_lt hi, coeff_eq_zero_of_nat_degree_lt, norm_zero],
+      rw_mod_cast mul_zero,
+      { rwa monic.nat_degree_map h1,
+        apply_instance, }}},
+end
+
+example (i : ℕ) : i ≠ 0 → 0 < i :=
+begin
+  exact zero_lt_iff.mpr,
 end
 
 end polynomial
@@ -113,6 +140,7 @@ open_locale classical
 open_locale big_operators
 open_locale polynomial
 
+-- What is K is only a Q-algebra of finite dimension without zero divisors?
 variables {K : Type*} [field K] [number_field K] {n : ℕ} (x : K)
 open polynomial
 
@@ -135,7 +163,7 @@ end
 
 local attribute [-instance] complex.algebra
 
-lemma minpoly_coeff_le_of_all_abs_le {B : ℝ} (hB : 1 ≤ B)
+lemma minpoly_coeff_le_of_all_abs_le {B : ℝ}
   (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) ≤ B}) (hxi : is_integral ℤ x) (i : ℕ) :
   (|(minpoly ℤ x).coeff i| : ℝ) ≤ B^((minpoly ℤ x).nat_degree - i)
     * ((minpoly ℤ x).nat_degree.choose i) :=
@@ -154,10 +182,9 @@ begin
     simp only [coeff_map, ring_hom.eq_int_cast, ring_hom.map_int_cast, mem_set_of_eq],
     norm_cast, },
   suffices : ∀ z ∈ (map (algebra_map ℚ ℂ) (minpoly ℚ x)).roots, abs z ≤ B,
-  { convert coeff_le_of_roots_le i _ _ hsp this using 1,
+  { convert coeff_le_of_roots_le i _ hsp this using 1,
     { simp only [hdg, one_pow, one_mul], },
-    { rw hmp, exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), },
-    { linarith, }},
+    { rw hmp, exact monic.map (algebra_map ℤ ℚ) (minpoly.monic hxi), }},
   intros z hz,
   suffices : ∃ (φ : K →+* ℂ), φ x = z,
   { obtain ⟨φ, hφ⟩ := this, rw ←hφ, exact (hx φ), },
@@ -168,7 +195,7 @@ begin
   apply_instance,
 end
 
-/-- TODO. Golf this -/
+-- TODO. Finish clean up & remove condition on B
 lemma finite_all_abs_le {B : ℝ} (hB : 1 ≤ B) :
   {x : K | is_integral ℤ x ∧ ∀ φ : K →+* ℂ, abs (φ x) ≤ B}.finite :=
 begin
@@ -186,7 +213,7 @@ begin
     { exact nat_degree_le_finrank hx.1, },
     { intro i,
       suffices : B ^ ((minpoly ℤ x).nat_degree - i) * ↑((minpoly ℤ x).nat_degree.choose i) ≤ C,
-      { exact_mod_cast le_trans (minpoly_coeff_le_of_all_abs_le x hB hx.right hx.left i) this, },
+      { exact_mod_cast le_trans (minpoly_coeff_le_of_all_abs_le x hx.right hx.left i) this, },
       calc
         B ^ ((minpoly ℤ x).nat_degree - i) * ((minpoly ℤ x).nat_degree.choose i) ≤
               B ^ (minpoly ℤ x).nat_degree * ((minpoly ℤ x).nat_degree.choose i)
@@ -219,8 +246,7 @@ begin
       rw [coeff_eq_zero_of_nat_degree_lt, coeff_eq_zero_of_nat_degree_lt],
       { rcases hy with ⟨hy_left, hy_right⟩, linarith, },
       { rcases hx with ⟨hx_left, hx_right⟩, linarith, }},
-    {
-      refine finite.of_finite_image _ this,
+    { refine finite.of_finite_image _ this,
       have : (set.pi univ (λ d : fin (finrank ℚ K + 1), Icc (- C : ℤ) C )).finite
         := finite.pi (λ d, finite_Icc _ _),
       refine finite.subset this _,
@@ -236,16 +262,15 @@ begin
   { exact λ p _, polynomial.root_set_finite p K, },
 end
 
-/-- TODO. Golf this -/
 -- TODO we don't really need K to be a number field here, more general field extensions are fine
 -- as long as we keep the condition that x is integral over ℤ
 variables (hx : ∀ φ : K →+* ℂ, abs (φ x) = 1) (hxi : is_integral ℤ x)
 include hx hxi
 /-- Lemma 1.6 of Washington's Introduction to cyclotomic fields -/
-lemma mem_roots_of_unity_of_abs_eq_one : ∃ (n : ℕ) (hn : 0 < n), x ^ n = 1 :=
+lemma mem_roots_of_unity_of_abs_le_one : ∃ (n : ℕ) (hn : 0 < n), x ^ n = 1 :=
 begin
   obtain ⟨a, -, b, -, habne, h⟩ := @infinite.exists_ne_map_eq_of_maps_to _ _ _ _
-      ((^) x : ℕ → K) infinite_univ _ (finite_all_abs_eq_one),
+    ((^) x : ℕ → K) infinite_univ _ (finite_all_abs_le (le_refl 1)),
   { replace habne := habne.lt_or_lt,
     wlog : a < b := habne using [a b],
     refine ⟨b - a, tsub_pos_of_lt habne, _⟩,
@@ -253,8 +278,9 @@ begin
     { contrapose! hx,
       simp only [hx, complex.abs_zero, ring_hom.map_zero, ne.def, not_false_iff, zero_ne_one],
       use (is_alg_closed.lift (number_field.is_algebraic K)).to_ring_hom },
-    rw [pow_sub₀ _ hxne habne.le, h, mul_inv_cancel (pow_ne_zero b hxne)] },
-  { rw [set.maps_univ_to],
-    exact λ a, ⟨hxi.pow a, λ φ, by simp [hx φ, is_absolute_value.abv_pow complex.abs]⟩ },
+    rw [pow_sub₀ _ hxne habne.le, h, mul_inv_cancel (pow_ne_zero b hxne)], },
+  { rw set.maps_univ_to,
+    refine λ a, ⟨hxi.pow a, λ φ, by simp [hx φ, complex.abs_pow, one_pow]⟩, },
 end
+
 end backwards
