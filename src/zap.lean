@@ -62,25 +62,24 @@ noncomputable theory
 
 variables {K : Type*} [field K] [number_field K] {x : K}
 
-/-- TODO. Golf this -/
+/-- TODO: Put that in FLT also -/
 lemma nat_degree_le_finrank
   (hxi : is_integral ℤ x) :
   (minpoly ℤ x).nat_degree ≤ finrank ℚ K :=
 begin
   rw (_ : (minpoly ℤ x).nat_degree = (minpoly ℚ x).nat_degree),
-  rw [← intermediate_field.adjoin.finrank (is_separable.is_integral ℚ x),
-    ← intermediate_field.finrank_eq_finrank_subalgebra],
-  convert submodule.finrank_le (ℚ⟮x⟯.to_subalgebra.to_submodule : submodule _ _),
-  have : minpoly ℚ x = (minpoly ℤ x).map (algebra_map ℤ ℚ),
-  from minpoly.gcd_domain_eq_field_fractions' ℚ hxi,
-  rw [this, nat_degree_map_eq_of_injective _],
-  exact is_fraction_ring.injective ℤ ℚ,
+  { rw [← intermediate_field.adjoin.finrank (is_separable.is_integral ℚ x),
+      ← intermediate_field.finrank_eq_finrank_subalgebra],
+    convert submodule.finrank_le (ℚ⟮x⟯.to_subalgebra.to_submodule : submodule _ _), },
+  { rw (_ : minpoly ℚ x = (minpoly ℤ x).map (algebra_map ℤ ℚ)),
+    exact (monic.nat_degree_map (minpoly.monic hxi) _).symm,
+    exact minpoly.gcd_domain_eq_field_fractions' ℚ hxi, }
 end
 
 local attribute [-instance] complex.algebra
 
 lemma minpoly_coeff_le_of_all_abs_le {B : ℝ}
-  (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) ≤ B}) (hxi : is_integral ℤ x) (i : ℕ) :
+  (hxi : is_integral ℤ x) (hx : x ∈ {x : K | ∀ (φ : K →+* ℂ), abs (φ x) ≤ B})  (i : ℕ) :
   (|(minpoly ℤ x).coeff i| : ℝ) ≤ B^((minpoly ℤ x).nat_degree - i)
     * ((minpoly ℤ x).nat_degree.choose i) :=
 begin
@@ -128,7 +127,7 @@ begin
     { exact nat_degree_le_finrank hx.1, },
     { intro i,
       suffices : B ^ ((minpoly ℤ x).nat_degree - i) * ((minpoly ℤ x).nat_degree.choose i) ≤ C,
-      { exact_mod_cast le_trans (minpoly_coeff_le_of_all_abs_le hx.right hx.left i) this, },
+      { exact_mod_cast le_trans (minpoly_coeff_le_of_all_abs_le hx.left hx.right i) this, },
       calc
         B ^ ((minpoly ℤ x).nat_degree - i) * ((minpoly ℤ x).nat_degree.choose i) ≤
               B ^ (minpoly ℤ x).nat_degree * ((minpoly ℤ x).nat_degree.choose i)
@@ -172,7 +171,7 @@ end
 
 /-- Lemma 1.6 of Washington's Introduction to cyclotomic fields -/
 lemma mem_roots_of_unity_of_abs_le_one
-  (hx : ∀ φ : K →+* ℂ, abs (φ x) = 1) (hxi : is_integral ℤ x) :
+  (hxi : is_integral ℤ x)  (hx : ∀ φ : K →+* ℂ, abs (φ x) = 1) :
   ∃ (n : ℕ) (hn : 0 < n), x ^ n = 1 :=
 begin
   obtain ⟨a, -, b, -, habne, h⟩ := @infinite.exists_ne_map_eq_of_maps_to _ _ _ _
