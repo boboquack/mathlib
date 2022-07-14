@@ -6,6 +6,7 @@ Authors: X-F. Roblot
 
 import analysis.normed.field.basic
 import field_theory.splitting_field
+import ring_theory.polynomial.vieta
 
 /-!
 # Roots and coeffs
@@ -13,25 +14,6 @@ import field_theory.splitting_field
 This is a temporary file containing the proof that, if the roots of a polynomials are bounded,
 then its coefficients are also bounded. It relies on PR15008.
 -/
-
-section admit
-namespace multiset
-
-variables {R : Type*} [comm_ring R]
-
-/-- import from PR15008 -/
-def esymm (s : multiset R) (n : ℕ) : R := ((s.powerset_len n).map multiset.prod).sum
-
-/-- import from PR15008 -/
-lemma prod_X_sub_C_coeff (s : multiset R) {k : ℕ} (h : k ≤ s.card):
-    polynomial.coeff (s.map (λ r, polynomial.X - polynomial.C r)).prod k =
-    (-1)^k * s.esymm (s.card - k) :=
-begin
-  sorry,
-end
-
-end multiset
-end admit
 
 open_locale polynomial
 open_locale nnreal
@@ -52,7 +34,7 @@ begin
     rw [monic.def.mp h1, ring_hom.map_one, ring_hom.map_one, one_mul],
     rw multiset.prod_X_sub_C_coeff,
     swap, rwa hcd,
-    rw [norm_mul, (by norm_num : ∥(-1 : K) ^ i∥=  1), one_mul],
+    rw [norm_mul, (by norm_num : ∥(-1 : K) ^ (multiset.card (map f p).roots - i)∥=  1), one_mul],
     apply le_trans (multiset.le_sum_of_subadditive norm _ _ _ ),
     rotate, exact norm_zero, exact norm_add_le,
     rw multiset.map_map,
