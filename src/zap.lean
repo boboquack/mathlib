@@ -32,7 +32,7 @@ variables {F K : Type*} [field F] [nontrivial K] [normed_field K]
 open_locale polynomial
 open_locale nnreal
 
--- TODO. Clean up the proof
+-- TODO. Clean up the proof and transfer to the other PR
 lemma coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ)
   (h1 : p.monic) (h2 : splits f p) (h3 : ∀ z ∈ (map f p).roots, ∥z∥ ≤ B) :
   ∥ (map f p).coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
