@@ -6,34 +6,7 @@ Authors:  Alex J. Best, X-F. Roblot
 
 import number_theory.number_field
 import analysis.complex.polynomial
-
-section admit
-
-variables {R : Type*} [comm_ring R]
-variables {F K : Type*} [field F] [nontrivial K] [normed_field K]
-
-open_locale polynomial
-
-/-- import from #15008 -/
-def multiset.esymm (s : multiset R) (n : ℕ) : R := ((s.powerset_len n).map multiset.prod).sum
-
-/-- import from #15008 -/
-lemma multiset.prod_X_sub_C_coeff (s : multiset R) {k : ℕ} (h : k ≤ s.card):
-    polynomial.coeff (s.map (λ r, polynomial.X - polynomial.C r)).prod k =
-    (-1)^k * s.esymm (s.card - k) :=
-begin
-  sorry,
-end
-
-/-- import from #15275 -/
-lemma polynomial.coeff_le_of_roots_le {p : F[X]} {f : F →+* K} {B : ℝ} (i : ℕ)
-  (h1 : p.monic) (h2 : polynomial.splits f p) (h3 : ∀ z ∈ (polynomial.map f p).roots, ∥z∥ ≤ B) :
-  ∥ (polynomial.map f p).coeff i ∥ ≤ B^(p.nat_degree - i) * p.nat_degree.choose i  :=
-begin
-  sorry,
-end
-
-end admit
+import field_theory.coeff_pol
 
 section forward
 
