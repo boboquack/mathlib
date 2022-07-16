@@ -35,4 +35,4 @@ def polynomial_to_string(p) -> str:
     return sum_to_string(monomial_to_string(pows, coeff) for pows, coeff in p.dict().items())
 
 def naive_power_search(p, I) -> int:
-    return next(i for i in count() if p^i in I)
+    return next(i for i in count(2) if p^i in I)
