@@ -35,7 +35,7 @@ except Exception as e:
         raise e
     n = naive_power_search(p, I)
     coeffs = (p^n).lift(I)
-print(json.dumps({{'exponent': n, "coeffs": [polynomial_to_string(c) for c in coeffs]}}))
+print(json.dumps({{'exponent': int(n), "coeffs": [polynomial_to_string(c) for c in coeffs]}}))
 '''
     return query
 

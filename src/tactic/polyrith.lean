@@ -57,10 +57,6 @@ remember to force recompilation of any files that call `polyrith`.
 
 open tactic native
 
-lemma pow_eq_zero' {M : Type*} [monoid_with_zero M] [no_zero_divisors M] {x : M} (n : ℕ) :
-  x ^ n = 0 → x = 0 :=
-pow_eq_zero
-
 namespace polyrith
 
 /-! # Poly Datatype -/
@@ -471,18 +467,17 @@ meta def process_output (eq_names : list expr) (m : list expr) (R : expr) (sage_
   tactic format := do
   some (exp, coeffs_as_poly) ← convert_sage_output sage_out
     | fail!"internal error: No output available",
-  when (exp ≠ 1) $ refine ``(pow_eq_zero' %%`(exp) _),
   coeffs_as_pexpr ← coeffs_as_poly.mmap (poly.to_pexpr m),
   let eq_names_pexpr := eq_names.map to_pexpr,
   coeffs_as_expr ← coeffs_as_pexpr.mmap $ λ e, to_expr ``(%%e : %%R),
-  linear_combo.linear_combination eq_names_pexpr coeffs_as_pexpr,
+  linear_combo.linear_combination eq_names_pexpr coeffs_as_pexpr
+    (if exp ≠ 1 then some exp else none),
   let components := (eq_names.zip coeffs_as_expr).filter
     $ λ pr, bnot $ pr.2.is_app_of `has_zero.zero,
   expr_string ← components_to_lc_format components,
-  let refn : format :=
-    if exp ≠ 1 then format!"refine pow_eq_zero' {exp} _;" ++ format.line else "",
   let lc : format := "linear_combination " ++ format.group expr_string,
-  return $ format.nest 2 $ refn ++ lc
+  let lc := if exp ≠ 1 then lc ++ format!" with exponent {exp}" else lc,
+  return $ format.nest 2 lc
 
 /-- Tactic for the special case when no hypotheses are available. -/
 meta def no_hypotheses_case : tactic (option format) :=
