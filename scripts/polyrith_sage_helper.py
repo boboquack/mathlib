@@ -1,5 +1,6 @@
 # this file will be run by the remote sage server, so should not import local files.
 from functools import reduce
+from itertools import count
 from sage.rings.polynomial.polydict import ETuple
 
 def mk_app(*args: str) -> str:
@@ -32,3 +33,6 @@ def monomial_to_string(etuple: ETuple, coeff: QQ) -> str:
 
 def polynomial_to_string(p) -> str:
     return sum_to_string(monomial_to_string(pows, coeff) for pows, coeff in p.dict().items())
+
+def naive_power_search(p, I) -> int:
+    return next(i for i in count() if p^i in I)

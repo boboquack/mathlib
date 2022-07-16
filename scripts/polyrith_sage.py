@@ -27,8 +27,16 @@ P = PolynomialRing({type_str(type)}, 'var', {n_vars!r})
 gens = {eq_list}
 p = P({goal_type})
 I = ideal(gens)
-coeffs = p.lift(I)
-print(json.dumps([polynomial_to_string(c) for c in coeffs]))
+try:
+    coeffs = p.lift(I)
+    n = int(1)
+except Exception as e:
+    R = I.radical()
+    if p not in R:
+        raise e
+    n = naive_power_search(p, I)
+    coeffs = (p^n).lift(I)
+print(json.dumps({{'exponent': n, "coeffs": [polynomial_to_string(c) for c in coeffs]}}))
 '''
     return query
 

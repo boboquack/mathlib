@@ -57,6 +57,10 @@ remember to force recompilation of any files that call `polyrith`.
 
 open tactic native
 
+lemma pow_eq_zero' {M : Type*} [monoid_with_zero M] [no_zero_divisors M] {x : M} (n : ℕ) :
+  x ^ n = 0 → x = 0 :=
+pow_eq_zero
+
 namespace polyrith
 
 /-! # Poly Datatype -/
@@ -275,9 +279,10 @@ ch '('
     <|> sub_parser poly_parser <|> mul_parser poly_parser <|> pow_parser poly_parser)
   <* ch ')'
 
-/-- Parse the json output from `scripts/polyrith.py` into either an error message, a list of `poly`
-objects, or `none` if only trace output was requested. -/
-meta def convert_sage_output (j : json) : tactic (option (list poly)) :=
+/-- Parse the json output from `scripts/polyrith.py` into either an error message,
+a pair of an exponent and a list of `poly` objects,
+or `none` if only trace output was requested. -/
+meta def convert_sage_output (j : json) : tactic (option (ℕ × list poly)) :=
 do
   json.object obj ← pure j | fail!"Must be an object",
   let obj := rbmap.from_list obj,
@@ -289,6 +294,11 @@ do
       tactic.trace t },
     do
     { some d ← pure (obj.find "data") | pure none,
+      json.object d ← some d | fail!"internal error: data must be an object",
+      let obj := rbmap.from_list d,
+      some n ← pure (obj.find "exponent") | fail!"internal error: missing exponent field",
+      some d ← pure (obj.find "coeffs") | fail!"internal error: missing coeffs field",
+      json.of_int (int.of_nat n) ← pure n | fail!"bad int: {n}",
       json.array l ← some d | fail!"internal error: data field must be a string",
       l ← l.mmap $ λ x, do
       { json.of_string poly_s ← pure x | fail!"internal error: entries must be strings",
@@ -297,7 +307,7 @@ do
         | sum.inl s := fail!"internal error: unable to parse polynomial from.\n\n{s}"
         | sum.inr p := pure p
         end,
-      pure l }
+      pure (n, l) }
   else do
     json.of_string kind ← obj.find "error_name",
     json.of_string message ← obj.find "error_value",
@@ -459,7 +469,9 @@ a call to `linear_combination`.
 -/
 meta def process_output (eq_names : list expr) (m : list expr) (R : expr) (sage_out : json) :
   tactic format := do
-  some coeffs_as_poly ← convert_sage_output sage_out | fail!"internal error: No output available",
+  some (exp, coeffs_as_poly) ← convert_sage_output sage_out
+    | fail!"internal error: No output available",
+  when (exp ≠ 1) $ refine ``(pow_eq_zero' %%`(exp) _),
   coeffs_as_pexpr ← coeffs_as_poly.mmap (poly.to_pexpr m),
   let eq_names_pexpr := eq_names.map to_pexpr,
   coeffs_as_expr ← coeffs_as_pexpr.mmap $ λ e, to_expr ``(%%e : %%R),
@@ -467,7 +479,10 @@ meta def process_output (eq_names : list expr) (m : list expr) (R : expr) (sage_
   let components := (eq_names.zip coeffs_as_expr).filter
     $ λ pr, bnot $ pr.2.is_app_of `has_zero.zero,
   expr_string ← components_to_lc_format components,
-  return $ "linear_combination " ++ format.nest 2 (format.group expr_string)
+  let refn : format :=
+    if exp ≠ 1 then format!"refine pow_eq_zero' {exp} _;" ++ format.line else "",
+  let lc : format := "linear_combination " ++ format.group expr_string,
+  return $ format.nest 2 $ refn ++ lc
 
 /-- Tactic for the special case when no hypotheses are available. -/
 meta def no_hypotheses_case : tactic (option format) :=
