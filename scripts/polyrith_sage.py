@@ -31,8 +31,7 @@ try:
     coeffs = p.lift(I)
     n = int(1)
 except Exception as e:
-    R = I.radical()
-    if p not in R:
+    if p not in I.radical():
         raise e
     n = naive_power_search(p, I)
     coeffs = (p^n).lift(I)
