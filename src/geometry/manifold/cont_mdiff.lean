@@ -1071,6 +1071,79 @@ end module
 
 section tangent_map
 
+include Is I's
+
+/-- The map `x ↦ C(f x, f x₀) ∘ D_x(f) ∘ C(x₀, x) : M → (E →L[𝕜] E')` is continuous, where
+`C(y, y')` is the coordinate change function from `y` to `y'` in the tangent bundle. -/
+lemma cont_mdiff_at.mfderiv' {f : M → M'}
+  (hf : cont_mdiff_at I I' n f x) (hmn : m + 1 ≤ n) :
+  cont_mdiff_at I 𝓘(𝕜, E →L[𝕜] E') m
+  (λ x', (tangent_bundle_core I' M').coord_change (achart H' (f x')) (achart H' (f x))
+    (chart_at H' (f x') (f x')) ∘L mfderiv I I' f x' ∘L
+    (tangent_bundle_core I M).coord_change (achart H x) (achart H x') (chart_at H x x')) x :=
+begin
+  have h2f := cont_mdiff_at_iff_cont_mdiff_at_nhds.mp (hf.of_le $ (self_le_add_left 1 m).trans hmn),
+  have : cont_diff_within_at 𝕜 m (fderiv_within 𝕜 (written_in_ext_chart_at I I' x f) (range I))
+    (range I) (ext_chart_at I x x),
+  { rw [cont_mdiff_at_iff] at hf, exact hf.2.fderiv_within I.unique_diff hmn (mem_range_self _) },
+  have : cont_mdiff_at I 𝓘(𝕜, E →L[𝕜] E') m
+    (λ x', fderiv_within 𝕜 (written_in_ext_chart_at I I' x f) (range I) (ext_chart_at I x x')) x,
+  { rw [cont_mdiff_at_iff],
+    refine ⟨(this.continuous_within_at.comp (ext_chart_at_continuous_at I x).continuous_within_at
+      (λ _ _, mem_range_self _)).continuous_at univ_mem, _⟩,
+    simp_rw [function.comp, ext_chart_model_space_apply],
+    refine this.congr_of_eventually_eq' _ (mem_range_self _),
+    { refine eventually_of_mem (ext_chart_at_target_mem_nhds_within I x) (λ x' hx', _),
+      simp_rw [(ext_chart_at I x).right_inv hx'] } },
+  have : cont_mdiff_at I 𝓘(𝕜, E →L[𝕜] E') m
+    (λ x', fderiv_within 𝕜 (ext_chart_at I' (f x) ∘ (ext_chart_at I' (f x')).symm ∘
+      written_in_ext_chart_at I I' x' f ∘ ext_chart_at I x' ∘ (ext_chart_at I x).symm)
+      (range I) (ext_chart_at I x x')) x,
+  { refine this.congr_of_eventually_eq _,
+    filter_upwards [ext_chart_at_source_mem_nhds I x, h2f],
+    intros x₂ hx₂ h2x₂,
+    have : ∀ x' ∈ (ext_chart_at I x).symm ⁻¹' (ext_chart_at I x₂).source ∩
+        (ext_chart_at I x).symm ⁻¹' (f ⁻¹' (ext_chart_at I' (f x₂)).source),
+      (ext_chart_at I' (f x) ∘ (ext_chart_at I' (f x₂)).symm ∘
+      written_in_ext_chart_at I I' x₂ f ∘ ext_chart_at I x₂ ∘ (ext_chart_at I x).symm) x' =
+      written_in_ext_chart_at I I' x f x',
+    { rintro x' ⟨hx', h2x'⟩,
+      simp_rw [written_in_ext_chart_at, function.comp_apply],
+      rw [(ext_chart_at I x₂).left_inv hx', (ext_chart_at I' (f x₂)).left_inv h2x'] },
+    refine filter.eventually_eq.fderiv_within_eq_nhds (I.unique_diff _ $ mem_range_self _) _,
+    refine eventually_of_mem (inter_mem _ _) this,
+    { exact ext_chart_preimage_mem_nhds' I x hx₂ (ext_chart_at_source_mem_nhds I x₂) },
+    refine ext_chart_preimage_mem_nhds' I x hx₂ _,
+    exact (h2x₂.continuous_at).preimage_mem_nhds (ext_chart_at_source_mem_nhds _ _) },
+  /- The conclusion is the same as the following, when unfolding the coordinate change of
+    `tangent_bundle_core` -/
+  change cont_mdiff_at I 𝓘(𝕜, E →L[𝕜] E') m
+    (λ x', (fderiv_within 𝕜 (ext_chart_at I' (f x) ∘ (ext_chart_at I' (f x')).symm)
+        (range I') (ext_chart_at I' (f x') (f x'))).comp ((mfderiv I I' f x').comp
+          (fderiv_within 𝕜 (ext_chart_at I x' ∘ (ext_chart_at I x).symm)
+             (range I) (ext_chart_at I x x')))) x,
+  refine this.congr_of_eventually_eq _,
+  filter_upwards [ext_chart_at_source_mem_nhds I x, h2f,
+    hf.continuous_at.preimage_mem_nhds (ext_chart_at_source_mem_nhds I' (f x))],
+  intros x₂ hx₂ h2x₂ h3x₂,
+  symmetry,
+  rw [(h2x₂.mdifferentiable_at le_rfl).mfderiv],
+  have hI := (cont_diff_within_at_ext_coord_change I x₂ x $ local_equiv.mem_symm_trans_source _
+    hx₂ $ mem_ext_chart_source I x₂).differentiable_within_at le_top,
+  have hI' := (cont_diff_within_at_ext_coord_change I' (f x) (f x₂) $
+    local_equiv.mem_symm_trans_source _
+    (mem_ext_chart_source I' (f x₂)) h3x₂).differentiable_within_at le_top,
+  have h3f := (h2x₂.mdifferentiable_at le_rfl).2,
+  refine fderiv_within.comp₃ _ hI' h3f hI _ _ _ _ (I.unique_diff _ $ mem_range_self _),
+  { exact λ x _, mem_range_self _ },
+  { exact λ x _, mem_range_self _ },
+  { simp_rw [written_in_ext_chart_at, function.comp_apply,
+      (ext_chart_at I x₂).left_inv (mem_ext_chart_source I x₂)] },
+  { simp_rw [function.comp_apply, (ext_chart_at I x).left_inv hx₂] }
+end
+
+omit Is I's
+
 /-- If a function is `C^n` with `1 ≤ n` on a domain with unique derivatives, then its bundled
 derivative is continuous. In this auxiliary lemma, we prove this fact when the source and target
 space are model spaces in models with corners. The general fact is proved in
