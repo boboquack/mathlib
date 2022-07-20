@@ -12,20 +12,72 @@ import analysis.normed_space.is_R_or_C
 
 The purpose of this file is to prove that the derivative of the pointwise limit of a sequence of
 functions is the pointwise limit of the functions' derivatives when the derivatives converge
-_uniformly_. The formal statement appears as `has_fderiv_at_of_tendsto_uniformly_on`.
+_uniformly_. The formal statement appears as `has_fderiv_at_of_tendsto_locally_uniformly_at`.
 
 ## Main statements
 
-* `has_fderiv_at_of_tendsto_uniformly_on` : If `f : ℕ → E → G` is a sequence of functions with
-  derivatives `f' : ℕ → (E → (E →L[𝕜] G))` and the `f` converge pointwise to `g` and the `f'`
-  converge _uniformly_ on some closed ball, then the derivative of `g'` is the pointwise limit
-  of the `f'` on the closed ball
+* `has_fderiv_at_of_tendsto_locally_uniformly_at` : If
+  1. `f : ℕ → E → G` is a sequence of functions which have derivatives `f' : ℕ → (E → (E →L[𝕜] G))`
+    on a neighborhood of `x`,
+  2.the `f` converge pointwise to `g` on a neighborhood of `x`, and
+  3. the `f'` converge _locally uniformly_ at `x` to `g'`
+then the derivative of `g` is `g'` at `x`
 
 ## Implementation notes
 
-The primary components of the proof are the mean value theorem (in the guise of
-`convex.norm_image_sub_le_of_norm_has_fderiv_within_le`) and then various lemmas about manipulating
-uniform Cauchy sequences.
+Our technique for proving the main result is the famous "`ε / 3` proof." In words, you can find it
+explained, for instance, at [this StackExchange post](https://math.stackexchange.com/questions/214218/uniform-convergence-of-derivatives-tao-14-2-7).
+The subtlety is that we want to prove that the difference quotients of the `g` converge to the `g'`.
+That is, we want to prove something like:
+
+```
+∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x), |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
+```
+
+To do so, we will need to introduce a pair of quantifers
+
+```lean
+∀ ε > 0, ∃ N, ∀ n ≥ N, ∃ δ > 0, ∀ y ∈ B_δ(x), |y - x|⁻¹ * |(g y - g x) - g' x (y - x)| < ε.
+```
+
+So how do we write this in terms of filters? Well, the initial definition of the derivative is
+
+```lean
+tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (𝓝 x) (𝓝 0)
+```
+
+There are two ways we might introduce `n`. We could do:
+
+```lean
+∀ᶠ (n : ℕ) in at_top, tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (𝓝 x) (𝓝 0)
+```
+
+but this is equivalent to the quantifier order `∃ N, ∀ n ≥ N, ∀ ε > 0, ∃ δ > 0, ∀ y ∈ B_δ(x)`,
+which _implies_ our desired `∀ ∃ ∀ ∃ ∀` but is _not_ equivalent to it. On the other hand, we might
+try
+
+```lean
+tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (at_top ×ᶠ 𝓝 x) (𝓝 0)
+```
+
+but this is equivalent to the quantifer order `∀ ε > 0, ∃ N, ∃ δ > 0, ∀ n ≥ N, ∀ y ∈ B_δ(x)`, which
+again _implies_ our desired `∀ ∃ ∀ ∃ ∀` but is not equivalent to it.
+
+So to get the quantifier order we want, we need to introduce a new filter construction, which we
+call a "curried filter"
+
+```lean
+tendsto (|y - x|⁻¹ * |(g y - g x) - g' x (y - x)|) (at_top.curry (𝓝 x)) (𝓝 0)
+```
+
+Then the above implications are `filter.tendsto.curry` and
+`filter.tendsto.mono_left filter.curry_le_prod`. We will use both of these deductions as part of
+our proof.
+
+We note that if you loosen the assumptions of the main theorem then the proof becomes quite a bit
+easier. In particular, if you assume there is a common neighborhood `s` where all of the three
+assumptions of `has_fderiv_at_of_tendsto_locally_uniformly_at` hold and that the `f'` are
+continuous, then you can avoid the mean value theorem and much of the work around curried fitlers.
 
 ## Tags
 
@@ -37,34 +89,25 @@ section filter_curry
 variables {α β γ : Type*}
 
 def filter.curry (f : filter α) (g : filter β) : filter (α × β) :=
-{ sets := { s | ∀ᶠ (a : α) in f, ∀ᶠ (b : β) in g, (a, b) ∈ s},
+{ sets := { s | ∀ᶠ (a : α) in f, ∀ᶠ (b : β) in g, (a, b) ∈ s },
   univ_sets := (by simp only [set.mem_set_of_eq, set.mem_univ, filter.eventually_true]),
   sets_of_superset := begin
     intros x y hx hxy,
     simp only [set.mem_set_of_eq] at hx ⊢,
-    apply hx.mono,
-    intros a ha,
-    apply ha.mono,
-    intros b hb,
-    calc (a, b) ∈ x : hb ... ⊆ y : hxy,
+    exact hx.mono (λ a ha, ha.mono(λ b hb, set.mem_of_subset_of_mem hxy hb)),
   end,
   inter_sets := begin
     intros x y hx hy,
     simp only [set.mem_set_of_eq, set.mem_inter_eq] at hx hy ⊢,
-    apply (hx.and hy).mono,
-    intros a ha,
-    apply (ha.1.and ha.2).mono,
-    intros b hb,
-    exact hb,
-  end,
-}
+    exact (hx.and hy).mono (λ a ha, (ha.1.and ha.2).mono (λ b hb, hb)),
+  end, }
 
 lemma filter.eventually_curry_iff {f : filter α} {g : filter β} {p : α × β → Prop} :
   (∀ᶠ (x : α × β) in f.curry g, p x) ↔ ∀ᶠ (x : α) in f, ∀ᶠ (y : β) in g, p (x, y) :=
 begin
   simp only [filter.curry],
   rw filter.eventually_iff,
-  simp,
+  simp only [filter.mem_mk, set.mem_set_of_eq],
 end
 
 lemma filter.curry_le_prod {f : filter α} {g : filter β} :
@@ -100,6 +143,7 @@ end
 
 open filter
 open_locale filter
+
 lemma bah {f : filter α} {f' : filter β} {g : filter γ} {p : (α × β) × γ × γ → Prop} :
   (∀ᶠ x in (f ×ᶠ f' ×ᶠ (g ×ᶠ g)), p x) → (∀ᶠ (x : (α × β) × γ) in (f ×ᶠ f' ×ᶠ g), p ((x.1.1, x.1.2), x.2, x.2)) :=
 begin
@@ -117,7 +161,8 @@ open_locale uniformity filter topological_space
 
 section limits_of_derivatives
 
-variables {E : Type*} [normed_group E] [normed_space ℝ E]
+variables {ι : Type*} {l : filter ι}
+  {E : Type*} [normed_group E] [normed_space ℝ E]
   {𝕜 : Type*} [is_R_or_C 𝕜] [normed_space 𝕜 E]
   {G : Type*} [normed_group G] [normed_space 𝕜 G]
   {f : ℕ → E → G} {g : E → G} {f' : ℕ → (E → (E →L[𝕜] G))} {g' : E → (E →L[𝕜] G)}
@@ -142,18 +187,13 @@ begin
   simp_rw [metric.tendsto_nhds, dist_eq_norm, sub_zero] at hfg'' ⊢,
   intros ε hε,
   obtain ⟨q, hqpos, hqε⟩ := exists_pos_rat_lt hε,
-  have hold := (hfg'' (q : ℝ) (by simp [hqpos])),
-  have hold := tendsto_prod_assoc_symm.eventually hold,
-  have hold := hold.and this,
-  -- simp only [equiv.prod_assoc_symm_apply] at hold,
-  obtain ⟨a, b, c, d, e⟩ := eventually_prod_iff.1 hold,
+  have hold := tendsto_prod_assoc_symm.eventually (hfg'' (q : ℝ) (by simp [hqpos])),
+  obtain ⟨a, b, c, d, e⟩ := eventually_prod_iff.1 (hold.and this),
   obtain ⟨a', b', c', d', e'⟩ := eventually_prod_iff.1 d,
   obtain ⟨r, hr, hr'⟩ := metric.nhds_basis_ball.eventually_iff.mp d',
   rw eventually_prod_iff,
-  use [a, b, (λ n : ℕ × E, a' n.fst ∧ metric.ball x r n.snd)],
-  split,
-  sorry,
-  intros n hn n' hn',
+  refine ⟨a, b, (λ n : ℕ × E, a' n.fst ∧ metric.ball x r n.snd),
+    b'.prod_mk (eventually_mem_set.mpr (metric.nhds_basis_ball.mem_of_mem hr)), λ n hn n' hn', _⟩,
 
   rw [norm_smul, norm_inv, is_R_or_C.norm_coe_norm],
   refine lt_of_le_of_lt _ hqε,
@@ -179,7 +219,7 @@ In words the assumptions mean the following:
   * `hfg`: The `f n` converge pointwise to `g` on a neighborhood of `x`
   * `hfg'`: The `f'` converge "uniformly at" `x` to `g'`. This does not mean that the `f' n` even
     converge away from `x`! --/
-lemma has_fderiv_at_of_tendsto_uniformly_on
+lemma has_fderiv_at_of_tendsto_locally_uniformly_at
   (hf : ∀ᶠ (n : ℕ × E) in (at_top ×ᶠ 𝓝 x), has_fderiv_at (f n.fst) (f' n.fst n.snd) n.snd)
   (hfg : ∀ᶠ y in 𝓝 x, tendsto (λ n, f n y) at_top (𝓝 (g y)))
   (hfg' : tendsto (λ n : ℕ × E, f' n.fst n.snd - g' n.snd) (at_top ×ᶠ 𝓝 x) (𝓝 0)) :
@@ -202,10 +242,7 @@ begin
     specialize this ε hε,
     rw eventually_curry_iff at this,
     simp only at this,
-    rw eventually_const at this,
-    apply this.mono,
-    simp,
-  },
+    exact (eventually_const.mp this).mono (by simp only [imp_self, forall_const]), },
 
   -- With the new quantifier in hand, we can perform the famous `ε/3` proof. Specifically,
   -- we will break up the limit (the difference functions minus the derivative go to 0) into 3:
@@ -222,48 +259,36 @@ begin
   { ext, simp only [pi.add_apply], rw [←smul_add, ←smul_add], congr,
   simp only [map_sub, sub_add_sub_cancel, continuous_linear_map.coe_sub', pi.sub_apply], },
   simp_rw this,
-  have : 𝓝 (0 : G) = 𝓝 (0 + 0 + 0), simp,
+  have : 𝓝 (0 : G) = 𝓝 (0 + 0 + 0), simp only [add_zero],
   rw this,
   refine tendsto.add (tendsto.add _ _) _,
-  { -- Difference quotients converge uniformly
-    exact (difference_quotients_converge_uniformly hf hfg hfg').mono_left curry_le_prod,
-  },
+  simp only,
+  { exact (difference_quotients_converge_uniformly hf hfg hfg').mono_left curry_le_prod, },
   { -- (Almost) the definition of the derivatives
-    simp only,
     rw metric.tendsto_nhds,
     intros ε hε,
     rw eventually_curry_iff,
-    apply hf.curry.mono,
-    intros n hn,
+    refine hf.curry.mono (λ n hn, _),
     have := hn.self_of_nhds,
     rw [has_fderiv_at_iff_tendsto, metric.tendsto_nhds] at this,
-    specialize this ε hε,
-    apply this.mono,
-    intros y hy,
+    refine (this ε hε).mono (λ y hy, _),
     rw dist_eq_norm at hy ⊢,
-    simp at hy ⊢,
+    simp only [sub_zero, map_sub, norm_mul, norm_inv, norm_norm] at hy ⊢,
     rw [norm_smul, norm_inv, is_R_or_C.norm_coe_norm],
-    exact hy,
-  },
+    exact hy, },
   { -- hfg' after specializing to `x` and applying the definition of the operator norm
-    simp only,
-    suffices : tendsto (λ (i : ℕ × E), (↑∥i.snd - x∥)⁻¹ • (f' i.fst x - g' x) (i.snd - x)) (at_top ×ᶠ (𝓝 x)) (𝓝 0), {
-      exact this.mono_left (curry_le_prod),
-    },
-    have : continuous (λ _x : E, x), exact continuous_const,
-    have := this.tendsto x,
-    have hproj := hfg'.comp (tendsto_id.prod_map this),
-    rw tendsto_zero_iff_norm_tendsto_zero at hproj,
-    refine squeeze_zero_norm _ hproj,
+    refine tendsto.mono_left _ curry_le_prod,
+    have : continuous (λ _x : E, x) := continuous_const,
+    have hproj := hfg'.comp (tendsto_id.prod_map (this.tendsto x)),
+    refine squeeze_zero_norm _ (tendsto_zero_iff_norm_tendsto_zero.mp hproj),
     simp_rw [norm_smul, norm_inv, is_R_or_C.norm_coe_norm],
     intros n,
 
     by_cases hx : x = n.snd, { simp [hx], },
     have hnx : 0 < ∥n.snd - x∥,
-    {rw norm_pos_iff, intros hx', exact hx (eq_of_sub_eq_zero hx').symm, },
+    { rw norm_pos_iff, intros hx', exact hx (eq_of_sub_eq_zero hx').symm, },
     rw [inv_mul_le_iff hnx, mul_comm],
-    exact (f' n.fst x - g' x).le_op_norm (n.snd - x),
-  },
+    exact (f' n.fst x - g' x).le_op_norm (n.snd - x), },
 end
 
 end limits_of_derivatives
