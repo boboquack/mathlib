@@ -165,23 +165,23 @@ variables {ι : Type*} {l : filter ι}
   {E : Type*} [normed_group E] [normed_space ℝ E]
   {𝕜 : Type*} [is_R_or_C 𝕜] [normed_space 𝕜 E]
   {G : Type*} [normed_group G] [normed_space 𝕜 G]
-  {f : ℕ → E → G} {g : E → G} {f' : ℕ → (E → (E →L[𝕜] G))} {g' : E → (E →L[𝕜] G)}
+  {f : ι → E → G} {g : E → G} {f' : ι → (E → (E →L[𝕜] G))} {g' : E → (E →L[𝕜] G)}
   {s : set E} {x : E} {C : ℝ}
 
 /-- If `f_n → g` pointwise and the derivatives `(f_n)' → h` _uniformly_ converge, then
 in fact for a fixed `y`, the difference quotients `∥z - y∥⁻¹ • (f_n z - f_n y)` converge
 _uniformly_ to `∥z - y∥⁻¹ • (g z - g y)` -/
 lemma difference_quotients_converge_uniformly
-  (hf : ∀ᶠ (n : ℕ × E) in (at_top ×ᶠ 𝓝 x), has_fderiv_at (f n.fst) (f' n.fst n.snd) n.snd)
-  (hfg : ∀ᶠ (y : E) in 𝓝 x, tendsto (λ n, f n y) at_top (𝓝 (g y)))
-  (hfg' : tendsto (λ n : ℕ × E, f' n.fst n.snd - g' n.snd) (at_top ×ᶠ 𝓝 x) (𝓝 0)) :
-  tendsto (λ n : ℕ × E, (∥n.snd - x∥⁻¹ : 𝕜) • ((g n.snd) - (g x) - ((f n.fst n.snd) - (f n.fst x)))) (at_top ×ᶠ 𝓝 x) (𝓝 0) :=
+  (hf : ∀ᶠ (n : ι × E) in (l ×ᶠ 𝓝 x), has_fderiv_at (f n.fst) (f' n.fst n.snd) n.snd)
+  (hfg : ∀ᶠ (y : E) in 𝓝 x, tendsto (λ n, f n y) l (𝓝 (g y)))
+  (hfg' : tendsto (λ n : ι × E, f' n.fst n.snd - g' n.snd) (l ×ᶠ 𝓝 x) (𝓝 0)) :
+  tendsto (λ n : ι × E, (∥n.snd - x∥⁻¹ : 𝕜) • ((g n.snd) - (g x) - ((f n.fst n.snd) - (f n.fst x)))) (l ×ᶠ 𝓝 x) (𝓝 0) :=
 begin
-  suffices : tendsto (λ n : ℕ × ℕ × E, (∥n.2.2 - x∥⁻¹ : 𝕜) • ((f n.1 - f n.2.1) n.2.2 - (f n.1 - f n.2.1) x)) (at_top ×ᶠ (at_top ×ᶠ 𝓝 x)) (𝓝 0),
+  suffices : tendsto (λ n : ι × ι × E, (∥n.2.2 - x∥⁻¹ : 𝕜) • ((f n.1 - f n.2.1) n.2.2 - (f n.1 - f n.2.1) x)) (l ×ᶠ (l ×ᶠ 𝓝 x)) (𝓝 0),
   {
     sorry,
   },
-  have hfg'' : tendsto (λ n : (ℕ × ℕ) × E, f' n.fst.fst n.snd - f' n.fst.snd n.snd) (at_top ×ᶠ at_top ×ᶠ 𝓝 x) (𝓝 0), sorry,
+  have hfg'' : tendsto (λ n : (ι × ι) × E, f' n.fst.fst n.snd - f' n.fst.snd n.snd) (l ×ᶠ l ×ᶠ 𝓝 x) (𝓝 0), sorry,
   have := tendsto_swap4_prod.eventually (hf.prod_mk hf),
   have := tendsto_prod_assoc_symm.eventually (bah this),
   simp_rw [metric.tendsto_nhds, dist_eq_norm, sub_zero] at hfg'' ⊢,
@@ -192,7 +192,7 @@ begin
   obtain ⟨a', b', c', d', e'⟩ := eventually_prod_iff.1 d,
   obtain ⟨r, hr, hr'⟩ := metric.nhds_basis_ball.eventually_iff.mp d',
   rw eventually_prod_iff,
-  refine ⟨a, b, (λ n : ℕ × E, a' n.fst ∧ metric.ball x r n.snd),
+  refine ⟨a, b, (λ n : ι × E, a' n.fst ∧ metric.ball x r n.snd),
     b'.prod_mk (eventually_mem_set.mpr (metric.nhds_basis_ball.mem_of_mem hr)), λ n hn n' hn', _⟩,
 
   rw [norm_smul, norm_inv, is_R_or_C.norm_coe_norm],
@@ -206,7 +206,6 @@ begin
     (λ y hy, ((e hn (e' hn'.1 (hr' hy))).2.1.sub (e hn (e' hn'.1 (hr' hy))).2.2).has_fderiv_within_at)
     (λ y hy, (e hn (e' hn'.1 (hr' hy))).1.le)
     (convex_ball x r) (metric.mem_ball_self hr) hn'.2,
-
 end
 
 /-- (d/dx) lim_{n → ∞} f_n x = lim_{n → ∞} f'_n x on a closed ball when the f'_n
@@ -219,10 +218,10 @@ In words the assumptions mean the following:
   * `hfg`: The `f n` converge pointwise to `g` on a neighborhood of `x`
   * `hfg'`: The `f'` converge "uniformly at" `x` to `g'`. This does not mean that the `f' n` even
     converge away from `x`! --/
-lemma has_fderiv_at_of_tendsto_locally_uniformly_at
-  (hf : ∀ᶠ (n : ℕ × E) in (at_top ×ᶠ 𝓝 x), has_fderiv_at (f n.fst) (f' n.fst n.snd) n.snd)
-  (hfg : ∀ᶠ y in 𝓝 x, tendsto (λ n, f n y) at_top (𝓝 (g y)))
-  (hfg' : tendsto (λ n : ℕ × E, f' n.fst n.snd - g' n.snd) (at_top ×ᶠ 𝓝 x) (𝓝 0)) :
+lemma has_fderiv_at_of_tendsto_locally_uniformly_at [l.ne_bot]
+  (hf : ∀ᶠ (n : ι × E) in (l ×ᶠ 𝓝 x), has_fderiv_at (f n.fst) (f' n.fst n.snd) n.snd)
+  (hfg : ∀ᶠ y in 𝓝 x, tendsto (λ n, f n y) l (𝓝 (g y)))
+  (hfg' : tendsto (λ n : ι × E, f' n.fst n.snd - g' n.snd) (l ×ᶠ 𝓝 x) (𝓝 0)) :
   has_fderiv_at g (g' x) x :=
 begin
   -- The proof strategy follows several steps:
@@ -235,7 +234,7 @@ begin
 
   -- To prove that ∀ε > 0, ∃δ > 0, ∀y ∈ B_δ(x), we will need to introduce a quantifier:
   -- ∀ε > 0, ∃N, ∀ n ≥ N, ∃δ > 0, ∀y ∈ B_δ(x). This is done by inserting the `curried` filter
-  suffices : tendsto (λ (y : ℕ × E), ∥y.snd - x∥⁻¹ * ∥g y.snd - g x - (g' x) (y.snd - x)∥) (at_top.curry (𝓝 x)) (𝓝 0), {
+  suffices : tendsto (λ (y : ι × E), ∥y.snd - x∥⁻¹ * ∥g y.snd - g x - (g' x) (y.snd - x)∥) (l.curry (𝓝 x)) (𝓝 0), {
     -- NOTE (khw): This is a more generic fact, but is easier for now to prove in the metric case
     rw metric.tendsto_nhds at this ⊢,
     intros ε hε,
@@ -252,10 +251,10 @@ begin
   conv
   { congr, funext, rw [←norm_norm, ←norm_inv, ←@is_R_or_C.norm_of_real 𝕜 _ _, is_R_or_C.of_real_inv, ←norm_smul], },
   rw ←tendsto_zero_iff_norm_tendsto_zero,
-  have : (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (g' x) (a.snd - x))) =
-    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (f a.fst a.snd - f a.fst x))) +
-    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f a.fst a.snd - f a.fst x) - ((f' a.fst x) a.snd - (f' a.fst x) x))) +
-    (λ a : ℕ × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f' a.fst x - g' x) (a.snd - x))),
+  have : (λ a : ι × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (g' x) (a.snd - x))) =
+    (λ a : ι × E, (∥a.snd - x∥⁻¹ : 𝕜) • (g a.snd - g x - (f a.fst a.snd - f a.fst x))) +
+    (λ a : ι × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f a.fst a.snd - f a.fst x) - ((f' a.fst x) a.snd - (f' a.fst x) x))) +
+    (λ a : ι × E, (∥a.snd - x∥⁻¹ : 𝕜) • ((f' a.fst x - g' x) (a.snd - x))),
   { ext, simp only [pi.add_apply], rw [←smul_add, ←smul_add], congr,
   simp only [map_sub, sub_add_sub_cancel, continuous_linear_map.coe_sub', pi.sub_apply], },
   simp_rw this,
