@@ -123,38 +123,6 @@ variables {E : Type*} [normed_group E] [normed_space ℝ E]
   {f : ℕ → E → G} {g : E → G} {f' : ℕ → (E → (E →L[𝕜] G))} {g' : E → (E →L[𝕜] G)}
   {s : set E} {x : E} {C : ℝ}
 
-lemma normed_group.uniform_cauchy_seq_on_iff_tendsto_uniformly_on_zero
-  {f : ℕ → E → G} {s : set E} {l : filter ℕ} :
-  uniform_cauchy_seq_on f l s ↔
-  tendsto_uniformly_on (λ n : ℕ × ℕ, λ z : E, f n.fst z - f n.snd z) (λ _x : E, 0) (l.prod l) s :=
-begin
-  split,
-  { intros hf u hu,
-    obtain ⟨ε, hε, H⟩ := uniformity_basis_dist.mem_uniformity_iff.mp hu,
-    have : {p : G × G | dist p.fst p.snd < ε} ∈ (𝓤 G),
-    { rw uniformity_basis_dist.mem_uniformity_iff,
-      use ε,
-      exact ⟨hε, by simp [H]⟩, },
-
-    refine (hf {p : G × G | dist p.fst p.snd < ε} this).mono (λ N h x hx, H _ _ _),
-    specialize h x hx,
-    simp at h,
-    rw dist_eq_norm at h,
-    simp [h], },
-
-  { intros hf u hu,
-    obtain ⟨ε, hε, H⟩ := uniformity_basis_dist.mem_uniformity_iff.mp hu,
-    have : {p : G × G | dist p.fst p.snd < ε} ∈ (𝓤 G),
-    { rw uniformity_basis_dist.mem_uniformity_iff,
-      use ε,
-      exact ⟨hε, by simp [H]⟩, },
-    refine (hf {p : G × G | dist p.fst p.snd < ε} this).mono (λ N h x hx, H _ _ _),
-    specialize h x hx,
-    simp only [set.mem_set_of_eq, dist_eq_norm] at h ⊢,
-    rw norm_sub_rev at h,
-    simpa using h, },
-end
-
 /-- If `f_n → g` pointwise and the derivatives `(f_n)' → h` _uniformly_ converge, then
 in fact for a fixed `y`, the difference quotients `∥z - y∥⁻¹ • (f_n z - f_n y)` converge
 _uniformly_ to `∥z - y∥⁻¹ • (g z - g y)` -/
